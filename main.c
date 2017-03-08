@@ -60,9 +60,7 @@ static void hello_task(void *pvParameters) {
   }
 }
 
-/*!
- * @brief Application entry point.
- */
+
 int main(void) {
   /* Init board hardware. */
   BOARD_InitPins();
