@@ -49,9 +49,7 @@
 /* Task priorities. */
 #define hello_task_PRIORITY (configMAX_PRIORITIES - 1)
 
-/*!
- * @brief Task responsible for printing of "Hello world." message.
- */
+
 static void hello_task(void *pvParameters) {
   for (;;) {
 	/*PRINTF("Hello world.\r\n");*/
