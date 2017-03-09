@@ -38,6 +38,7 @@
 #include "pin_mux.h"
 #include "clock_config.h"
 #include "DataTypeDefinitions.h"
+#include "Buttons.h"
 
 /* FreeRTOS kernel includes. */
 #include "FreeRTOS.h"
@@ -56,52 +57,9 @@
 /* Task priorities. */
 #define Buttons_task_PRIORITY (configMAX_PRIORITIES - 9)
 
-/*Buttons value in port c*/
-#define buttonOne 0x20 /*Bit 5, port C 0010_0000*/
-#define buttonTwo 0x80 /*Bit 7, port C, 1000_0000*/
-#define buttonThree 0x0 /*Bit 0, port C, 0000_0000*/
-#define buttonFour 0x200 /*Bit 9, port C, 0010_0000_0000*/
-#define buttonFive 0x100 /*Bit 8, port C, 0001_0000_0000*/
-#define buttonSix 0x8 /*Bit 3, port C, 0000_1000*/
+//Todo lo coppiado y pegado en Buttons.c
 
-/*Flags to check if a button was pressed*/
-uint8_t buttonOneFlag = FALSE;
-uint8_t buttonTwoFlag = FALSE;
-uint8_t buttonThreeFlag = FALSE;
-uint8_t buttonFourFlag = FALSE;
-uint8_t buttonFiveFlag = FALSE;
-uint8_t buttonSixFlag = FALSE;
-
-
-/*Port c interrupt handler function*/
-void PORTC_IRQHandler(void)
-{
-	uint32_t bitNumber = 0;
-	bitNumber = GPIO_GetPinsInterruptFlags(GPIOC);
-	switch(bitNumber)
-	{
-	case buttonOne:
-		GPIO_ClearPinsInterruptFlags(GPIOC, buttonOne);
-		buttonOneFlag = TRUE;
-	case buttonTwo:
-		GPIO_ClearPinsInterruptFlags(GPIOC, buttonTwo);
-		buttonTwoFlag = TRUE;
-	case buttonThree:
-		GPIO_ClearPinsInterruptFlags(GPIOC, buttonThree);
-		buttonThreeFlag = TRUE;
-	case buttonFour:
-		GPIO_ClearPinsInterruptFlags(GPIOC, buttonFour);
-		buttonFourFlag = TRUE;
-	case buttonFive:
-		GPIO_ClearPinsInterruptFlags(GPIOC, buttonFive);
-		buttonFiveFlag = TRUE;
-	case buttonSix:
-		GPIO_ClearPinsInterruptFlags(GPIOC, buttonSix);
-		buttonSixFlag = TRUE;
-	}
-
-}
-void pressedButtons(void *pvParameters);
+void pressedButtons_task(void *pvParameters);
 
 
 /*!
@@ -112,11 +70,39 @@ int main(void) {
 	BOARD_InitPins();
 	BOARD_BootClockRUN();
 	BOARD_InitDebugConsole();
+	port_pin_config_t config =
+	{
+			kPORT_PullDisable,
+			kPORT_FastSlewRate,
+			kPORT_PassiveFilterDisable,
+			kPORT_OpenDrainDisable,
+			kPORT_LowDriveStrength,
+			kPORT_MuxAsGpio,
+			kPORT_UnlockRegister
+	};
 
+	PORT_SetPinConfig(PORTC, BOARD_SW3_GPIO_PIN, &config);
+	PORT_SetPinInterruptConfig(BOARD_SW3_PORT, BOARD_SW3_GPIO_PIN, kPORT_InterruptFallingEdge);
+	/* Enable the interrupt. */
+	NVIC_SetPriority( BOARD_SW3_IRQ, 5);
+	NVIC_EnableIRQ( BOARD_SW3_IRQ);
+
+	//PORT_SetPinMux(BOARD_SW3_GPIO, PIN4_IDX, kPORT_MuxAsGpio); /* PORTA4 (pin L7) is configured as PTA4 */
+	PORT_SetPinMux(BOARD_LED_RED_GPIO_PORT, BOARD_LED_RED_GPIO_PIN, kPORT_MuxAsGpio);
+	PORT_SetPinMux(BOARD_LED_GREEN_GPIO_PORT, BOARD_LED_GREEN_GPIO_PIN, kPORT_MuxAsGpio);
+	PORT_SetPinMux(BOARD_LED_BLUE_GPIO_PORT, BOARD_LED_BLUE_GPIO_PIN, kPORT_MuxAsGpio);
+
+	/* Define the init structure for the input switch pin */
+	gpio_pin_config_t sw_config = { kGPIO_DigitalInput, 0 };
+
+	GPIO_PinInit(BOARD_SW3_GPIO, BOARD_SW3_GPIO_PIN, &sw_config);
+	CLOCK_EnableClock(kCLOCK_PortA);
+	CLOCK_EnableClock(kCLOCK_PortB);
+	CLOCK_EnableClock(kCLOCK_PortE);
 	/* Add your code here */
 
 	/* Create RTOS task */
-	xTaskCreate(pressedButtons, "Pressed_Buttons", configMINIMAL_STACK_SIZE, NULL, Buttons_task_PRIORITY, NULL);
+	xTaskCreate(pressedButtons_task, "PressedButtons_task", configMINIMAL_STACK_SIZE, NULL, Buttons_task_PRIORITY, NULL);
 	vTaskStartScheduler();
 
 	for(;;) { /* Infinite loop to avoid leaving the main function */
@@ -124,34 +110,5 @@ int main(void) {
 	}
 }
 
-void pressedButtons(void *pvParameters)
-{
-	for (;;)
-	{
-		if(TRUE == buttonOneFlag)
-		{
-
-		}
-		else if(TRUE == buttonTwoFlag)
-		{
-
-		}
-		else if(TRUE == buttonThreeFlag)
-		{
-
-		}
-		else if(TRUE == buttonFourFlag)
-		{
-
-		}
-		else if(TRUE == buttonFiveFlag)
-		{
-
-		}
-		else if(TRUE == buttonSixFlag)
-		{
-
-		}
-	}
-}
+//pressedButtons_task
 
