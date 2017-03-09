@@ -8,7 +8,7 @@
 #ifndef GLOBALFUNCTIONS_H_
 #define GLOBALFUNCTIONS_H_
 
-#include "GPIO.h"
+#include "fsl_gpio.h"
 #include "DataTypeDefinitions.h"
 
 void delay(uint16);

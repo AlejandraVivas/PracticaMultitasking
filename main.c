@@ -37,7 +37,7 @@
 #include "board.h"
 #include "pin_mux.h"
 #include "clock_config.h"
-/*#include "fsl_debug_console.h"*/
+#include "DataTypeDefinitions.h"
 
 /* FreeRTOS kernel includes. */
 #include "FreeRTOS.h"
@@ -45,38 +45,113 @@
 #include "queue.h"
 #include "timers.h"
 
+/* SDK drivers*/
+#include "fsl_port.h"
+#include "fsl_device_registers.h"
+#include "fsl_debug_console.h"
+#include "fsl_gpio.h"
+
+
 
 /* Task priorities. */
-#define hello_task_PRIORITY (configMAX_PRIORITIES - 1)
+#define Buttons_task_PRIORITY (configMAX_PRIORITIES - 9)
+
+/*Buttons value in port c*/
+#define buttonOne 0x20 /*Bit 5, port C 0010_0000*/
+#define buttonTwo 0x80 /*Bit 7, port C, 1000_0000*/
+#define buttonThree 0x0 /*Bit 0, port C, 0000_0000*/
+#define buttonFour 0x200 /*Bit 9, port C, 0010_0000_0000*/
+#define buttonFive 0x100 /*Bit 8, port C, 0001_0000_0000*/
+#define buttonSix 0x8 /*Bit 3, port C, 0000_1000*/
+
+/*Flags to check if a button was pressed*/
+uint8_t buttonOneFlag = FALSE;
+uint8_t buttonTwoFlag = FALSE;
+uint8_t buttonThreeFlag = FALSE;
+uint8_t buttonFourFlag = FALSE;
+uint8_t buttonFiveFlag = FALSE;
+uint8_t buttonSixFlag = FALSE;
 
 
-static void hello_task(void *pvParameters) {
-  for (;;) {
-	/*PRINTF("Hello world.\r\n");*/
-	/* Add your code here */
-    vTaskSuspend(NULL);
-  }
+/*Port c interrupt handler function*/
+void PORTC_IRQHandler(void)
+{
+	uint32_t bitNumber = 0;
+	bitNumber = GPIO_GetPinsInterruptFlags(GPIOC);
+	switch(bitNumber)
+	{
+	case buttonOne:
+		GPIO_ClearPinsInterruptFlags(GPIOC, buttonOne);
+		buttonOneFlag = TRUE;
+	case buttonTwo:
+		GPIO_ClearPinsInterruptFlags(GPIOC, buttonTwo);
+		buttonTwoFlag = TRUE;
+	case buttonThree:
+		GPIO_ClearPinsInterruptFlags(GPIOC, buttonThree);
+		buttonThreeFlag = TRUE;
+	case buttonFour:
+		GPIO_ClearPinsInterruptFlags(GPIOC, buttonFour);
+		buttonFourFlag = TRUE;
+	case buttonFive:
+		GPIO_ClearPinsInterruptFlags(GPIOC, buttonFive);
+		buttonFiveFlag = TRUE;
+	case buttonSix:
+		GPIO_ClearPinsInterruptFlags(GPIOC, buttonSix);
+		buttonSixFlag = TRUE;
+	}
+
 }
+void pressedButtons(void *pvParameters);
+
 
 /*!
  * @brief Application entry point.
  */
 int main(void) {
-  /* Init board hardware. */
-  BOARD_InitPins();
-  BOARD_BootClockRUN();
-  BOARD_InitDebugConsole();
+	/* Init board hardware. */
+	BOARD_InitPins();
+	BOARD_BootClockRUN();
+	BOARD_InitDebugConsole();
 
-  /* Add your code here */
+	/* Add your code here */
 
-  /* Create RTOS task */
-  xTaskCreate(hello_task, "Hello_task", configMINIMAL_STACK_SIZE, NULL, hello_task_PRIORITY, NULL);
-  vTaskStartScheduler();
+	/* Create RTOS task */
+	xTaskCreate(pressedButtons, "Pressed_Buttons", configMINIMAL_STACK_SIZE, NULL, Buttons_task_PRIORITY, NULL);
+	vTaskStartScheduler();
 
-  for(;;) { /* Infinite loop to avoid leaving the main function */
-    __asm("NOP"); /* something to use as a breakpoint stop while looping */
-  }
+	for(;;) { /* Infinite loop to avoid leaving the main function */
+		__asm("NOP"); /* something to use as a breakpoint stop while looping */
+	}
 }
 
+void pressedButtons(void *pvParameters)
+{
+	for (;;)
+	{
+		if(TRUE == buttonOneFlag)
+		{
 
+		}
+		else if(TRUE == buttonTwoFlag)
+		{
+
+		}
+		else if(TRUE == buttonThreeFlag)
+		{
+
+		}
+		else if(TRUE == buttonFourFlag)
+		{
+
+		}
+		else if(TRUE == buttonFiveFlag)
+		{
+
+		}
+		else if(TRUE == buttonSixFlag)
+		{
+
+		}
+	}
+}
 

@@ -1,258 +1,125 @@
 /*
- * SPI.c
- *
- *  Created on: 04/10/2016
- *      Author: Joab T
- */
+* Copyright (c) 2013 - 2015, Freescale Semiconductor, Inc.
+* All rights reserved.
+*
+* Redistribution and use in source and binary forms, with or without modification,
+* are permitted provided that the following conditions are met:
+*
+* o Redistributions of source code must retain the above copyright notice, this list
+*   of conditions and the following disclaimer.
+*
+* o Redistributions in binary form must reproduce the above copyright notice, this
+*   list of conditions and the following disclaimer in the documentation and/or
+*   other materials provided with the distribution.
+*
+* o Neither the name of Freescale Semiconductor, Inc. nor the names of its
+*   contributors may be used to endorse or promote products derived from this
+*   software without specific prior written permission.
+*
+* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+* ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+* WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+* DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+* ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+* (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+* LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+* ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+* (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
 
+#include "fsl_device_registers.h"
+#include "fsl_debug_console.h"
+#include "fsl_dspi.h"
+#include "board.h"
 #include "SPI.h"
-#include "GPIO.h"
 
-void SPI_init(const SPI_ConfigType* SPI_Config){
-	SPI_clk(SPI_Config->SPI_Channel);
-	GPIO_clockGating(SPI_Config->GPIOForSPI.GPIO_portName);
-	GPIO_pinControlRegister(SPI_Config->GPIOForSPI.GPIO_portName,SPI_Config->GPIOForSPI.SPI_clk,&(SPI_Config->pinConttrolRegisterPORTD));
-	GPIO_pinControlRegister(SPI_Config->GPIOForSPI.GPIO_portName,SPI_Config->GPIOForSPI.SPI_Sout,&(SPI_Config->pinConttrolRegisterPORTD));
-	SPI_setMaster(SPI_Config->SPI_Channel,SPI_Config->SPI_Master);
-	SPI_FIFO(SPI_Config->SPI_Channel,SPI_Config->SPI_EnableFIFO);
-	SPI_enable(SPI_Config->SPI_Channel);
-	SPI_ClockPolarity(SPI_Config->SPI_Channel,SPI_Config->SPI_Polarity);
-	SPI_frameSize(SPI_Config->SPI_Channel,SPI_Config->frameSize);
-	SPI_ClockPhase(SPI_Config->SPI_Channel,SPI_Config->SPI_Phase);
-	SPI_baudRate(SPI_Config->SPI_Channel,SPI_Config->baudrate);
-	SPI_mSBFirst(SPI_Config->SPI_Channel,SPI_MSB);
+#include "pin_mux.h"
+#include "clock_config.h"
+
+/* DSPI user callback */
+void DSPI_MasterUserCallback(SPI_Type *base, dspi_master_handle_t *handle, status_t status, void *userData);
+
+/*******************************************************************************
+ * Variables
+ ******************************************************************************/
+uint8_t masterRxData[TRANSFER_SIZE] = {0U};
+uint8_t masterTxData[TRANSFER_SIZE] = {0U};
+
+dspi_master_handle_t g_m_handle;
+
+volatile bool isTransferCompleted = false;
+
+/*******************************************************************************
+ * Code
+ ******************************************************************************/
+
+void DSPI_MasterUserCallback(SPI_Type *base, dspi_master_handle_t *handle, status_t status, void *userData)
+{
+    if (status == kStatus_Success)
+    {
+        __NOP();
+    }
 }
 
-void SPI_sendOneByte(uint8 Data){
-	SPI0_PUSHR = (Data);
-	while(0 == (SPI0_SR & SPI_SR_TCF_MASK));
-	SPI0_SR |= SPI_SR_TCF_MASK;
+uint8_t spi_init(void)
+{
+    dspi_master_config_t masterConfig;
+    uint32_t srcClock_Hz;
+
+    /* Master config structure*/
+    masterConfig.whichCtar = kDSPI_Ctar1;
+    masterConfig.ctarConfig.baudRate = TRANSFER_BAUDRATE;
+    masterConfig.ctarConfig.bitsPerFrame = 8;
+    masterConfig.ctarConfig.cpol = kDSPI_ClockPolarityActiveLow;
+    masterConfig.ctarConfig.cpha = kDSPI_ClockPhaseFirstEdge;
+    masterConfig.ctarConfig.direction = kDSPI_MsbFirst;
+    masterConfig.ctarConfig.pcsToSckDelayInNanoSec = 1000000000U / TRANSFER_BAUDRATE;
+    masterConfig.ctarConfig.lastSckToPcsDelayInNanoSec = 1000000000U / TRANSFER_BAUDRATE;
+    masterConfig.ctarConfig.betweenTransferDelayInNanoSec = 1000000000U / TRANSFER_BAUDRATE;
+    masterConfig.whichPcs = kDSPI_Pcs0;
+    masterConfig.pcsActiveHighOrLow = kDSPI_PcsActiveLow;
+    masterConfig.enableContinuousSCK = false;
+    masterConfig.enableRxFifoOverWrite = false;
+    masterConfig.enableModifiedTimingFormat = false;
+    masterConfig.samplePoint = kDSPI_SckToSin0Clock;
+
+    srcClock_Hz = CLOCK_GetFreq(DSPI0_CLK_SRC);
+    DSPI_MasterInit(SPI0, &masterConfig, srcClock_Hz);
+
+    return 0;
 }
 
-static void SPI_enable(SPI_ChannelType channel){
-	switch(channel){
-	case SPI_0:
-		SPI0_MCR &= ~(SPI_MCR_MDIS_MASK);
-		break;
-	case SPI_1:
-		SPI1_MCR &= ~(SPI_MCR_MDIS_MASK);
-		break;
-	case SPI_2:
-		SPI2_MCR &= ~(SPI_MCR_MDIS_MASK);
-		break;
-	default:
-		break;
-	}
+void spi_task(void *pvParameters)
+{
+    PRINTF("DSPI interrupt example start.\r\n");
+
+    uint32_t i;
+    dspi_transfer_t masterXfer;
+
+    /* Set up the transfer data */
+    for (i = 0U; i < 2; i++)
+    {
+        masterTxData[i] = 0x0F;
+        masterRxData[i] = 0U;
+    }
+
+    isTransferCompleted = false;
+
+    /* Set up master transfer */
+    DSPI_MasterTransferCreateHandle(SPI0, &g_m_handle, DSPI_MasterUserCallback, NULL);
+
+    /*Start master transfer*/
+    masterXfer.txData = masterTxData;
+    masterXfer.rxData = masterRxData;
+    masterXfer.dataSize = 2;
+    masterXfer.configFlags = kDSPI_MasterCtar0 | kDSPI_MasterPcs0 | kDSPI_MasterPcsContinuous;
+
+    DSPI_MasterTransferNonBlocking(SPI0, &g_m_handle, &masterXfer);
+
+    /* Wait to transfer all data. */
+    while (!isTransferCompleted)
+    {
+    }
+
 }
-
-static void SPI_clk(SPI_ChannelType channel){
-	switch(channel){
-	case SPI_0:
-		SIM_SCGC6 |= SIM_SCGC6_SPI0_MASK;
-		break;
-	case SPI_1:
-		SIM_SCGC6 |= SIM_SCGC6_SPI1_MASK;
-		break;
-	case SPI_2:
-		SIM_SCGC3 |= SIM_SCGC3_SPI2_MASK;
-		break;
-	default:
-		break;
-	}
-
-}
-
-static void SPI_setMaster(SPI_ChannelType channel, SPI_MasterType masterOrSlave){
-	switch(channel){
-	case SPI_0:
-		if(masterOrSlave)
-			SPI0_MCR |= SPI_MCR_MSTR_MASK;
-		else
-			SPI0_MCR &= ~(SPI_MCR_MSTR_MASK);
-		break;
-	case SPI_1:
-		if(masterOrSlave)
-			SPI1_MCR |= SPI_MCR_MSTR_MASK;
-		else
-			SPI1_MCR &= ~(SPI_MCR_MSTR_MASK);
-		break;
-	case SPI_2:
-		if(masterOrSlave)
-			SPI2_MCR |= SPI_MCR_MSTR_MASK;
-		else
-			SPI2_MCR &= ~(SPI_MCR_MSTR_MASK);
-		break;
-	default:
-		break;
-	}
-}
-
-static void SPI_FIFO(SPI_ChannelType channel, SPI_EnableFIFOType enableOrDisable){
-	switch(channel){
-	case SPI_0:
-		if(enableOrDisable)
-			SPI0_MCR &= ~(SPI_MCR_DIS_RXF_MASK | SPI_MCR_DIS_TXF_MASK);
-		else
-			SPI0_MCR |= (SPI_MCR_DIS_RXF_MASK | SPI_MCR_DIS_TXF_MASK);
-		break;
-	case SPI_1:
-		if(enableOrDisable)
-			SPI1_MCR &= ~(SPI_MCR_DIS_RXF_MASK | SPI_MCR_DIS_TXF_MASK);
-		else
-			SPI1_MCR |= (SPI_MCR_DIS_RXF_MASK | SPI_MCR_DIS_TXF_MASK);
-		break;
-	case SPI_2:
-		if(enableOrDisable)
-			SPI2_MCR &= ~(SPI_MCR_DIS_RXF_MASK | SPI_MCR_DIS_TXF_MASK);
-		else
-			SPI2_MCR |= (SPI_MCR_DIS_RXF_MASK | SPI_MCR_DIS_TXF_MASK);
-		break;
-	default:
-		break;
-	}
-}
-
-static void SPI_ClockPolarity(SPI_ChannelType channel, SPI_PolarityType cpol){
-	switch(channel){
-	case SPI_0:
-		if(cpol)
-			SPI0_CTAR0 |= SPI_CTAR_CPOL_MASK;
-		else
-			SPI0_CTAR0 &= ~(SPI_CTAR_CPOL_MASK);
-		break;
-	case SPI_1:
-		if(cpol)
-			SPI1_CTAR0 |= SPI_CTAR_CPOL_MASK;
-		else
-			SPI1_CTAR0 &= ~(SPI_CTAR_CPOL_MASK);
-		break;
-	case SPI_2:
-		if(cpol)
-			SPI2_CTAR0 |= SPI_CTAR_CPOL_MASK;
-		else
-			SPI2_CTAR0 &= ~(SPI_CTAR_CPOL_MASK);
-		break;
-	default:
-		break;
-	}
-}
-
-static void SPI_ClockPhase(SPI_ChannelType channel, SPI_PhaseType cpha){
-	switch(channel){
-	case SPI_0:
-		if(cpha)
-			SPI0_CTAR0 |= SPI_CTAR_CPHA_MASK;
-		else
-			SPI0_CTAR0 &= ~(SPI_CTAR_CPHA_MASK);
-		break;
-	case SPI_1:
-		if(cpha)
-			SPI1_CTAR0 |= SPI_CTAR_CPHA_MASK;
-		else
-			SPI1_CTAR0 &= ~(SPI_CTAR_CPHA_MASK);
-		break;
-	case SPI_2:
-		if(cpha)
-			SPI2_CTAR0 |= SPI_CTAR_CPHA_MASK;
-		else
-			SPI2_CTAR0 &= ~(SPI_CTAR_CPHA_MASK);
-		break;
-	default:
-		break;
-	}
-}
-
-static void SPI_baudRate(SPI_ChannelType channel, uint32 baudRate){
-	switch(channel){
-	case SPI_0:
-		SPI0_CTAR0 |= baudRate;
-		break;
-	case SPI_1:
-		SPI1_CTAR0 |= baudRate;
-		break;
-	case SPI_2:
-		SPI2_CTAR0 |= baudRate;
-		break;
-	default:
-		break;
-	}
-}
-
-static void SPI_mSBFirst(SPI_ChannelType channel, SPI_LSMorMSBType msb){
-	switch(channel){
-	case SPI_0:
-		if(msb)
-			SPI0_CTAR0 |= SPI_CTAR_LSBFE_MASK;
-		else
-			SPI0_CTAR0 &= ~(SPI_CTAR_LSBFE_MASK);
-		break;
-	case SPI_1:
-		if(msb)
-			SPI1_CTAR0 |= SPI_CTAR_LSBFE_MASK;
-		else
-			SPI1_CTAR0 &= ~(SPI_CTAR_LSBFE_MASK);
-		break;
-	case SPI_2:
-		if(msb)
-			SPI2_CTAR0 |= SPI_CTAR_LSBFE_MASK;
-		else
-			SPI2_CTAR0 &= ~(SPI_CTAR_LSBFE_MASK);
-		break;
-	default:
-		break;
-	}
-}
-
-static void SPI_frameSize(SPI_ChannelType channel, uint32 frameSize){
-	switch(channel){
-	case SPI_0:
-		SPI0_CTAR0 &= ~(SPI_CTAR_FMSZ_MASK);
-		SPI0_CTAR0 |= frameSize;
-		break;
-	case SPI_1:
-		SPI1_CTAR0 &= ~(SPI_CTAR_FMSZ_MASK);
-		SPI1_CTAR0 |= frameSize;
-		break;
-	case SPI_2:
-		SPI2_CTAR0 &= ~(SPI_CTAR_FMSZ_MASK);
-		SPI2_CTAR0 |= frameSize;
-		break;
-	default:
-		break;
-	}
-}
-
-void SPI_startTranference(SPI_ChannelType channel){
-	switch(channel){
-	case SPI_0:
-		SPI0_MCR &= ~(SPI_MCR_HALT_MASK);
-		break;
-	case SPI_1:
-		SPI1_MCR &= ~(SPI_MCR_HALT_MASK);
-		break;
-	case SPI_2:
-		SPI2_MCR &= ~(SPI_MCR_HALT_MASK);
-		break;
-	default:
-		break;
-	}
-}
-
-void SPI_stopTranference(SPI_ChannelType channel){
-	switch(channel){
-	case SPI_0:
-		SPI0_MCR |= SPI_MCR_HALT_MASK;
-		break;
-	case SPI_1:
-		SPI1_MCR |= SPI_MCR_HALT_MASK;
-		break;
-	case SPI_2:
-		SPI2_MCR |= SPI_MCR_HALT_MASK;
-		break;
-	default:
-		break;
-	}
-}
-
-
-
