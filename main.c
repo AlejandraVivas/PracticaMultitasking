@@ -67,8 +67,12 @@ uint32_t bitNumber = 0;
 
 
 /* Task priorities. */
-#define uartSending_task_PRIORITY (configMAX_PRIORITIES - 1)
-#define uartReceiving_task_PRIORITY (configMAX_PRIORITIES - 1)
+//#define uartSending_task_PRIORITY (configMAX_PRIORITIES - 1)
+//#define uartReceiving_task_PRIORITY (configMAX_PRIORITIES - 1)
+#define uartInit_task_PRIORITY (configMAX_PRIORITIES - 1)
+//#define readMemory_task_PRIORITY (configMAX_PRIORITIES - 2)
+
+
 
 //Todo lo coppiado y pegado en Buttons.c
 
@@ -144,16 +148,15 @@ int main(void) {
 	NVIC_SetPriority( PORTC_IRQn, 1);
 	NVIC_EnableIRQ( PORTC_IRQn);
 
-	uart_init();
+	//createQueues();
 
-	createQueues();
+
 
 
 	/* Add your code here */
 
 	/* Create RTOS task */
-	xTaskCreate(uartSending_task, "UartSending_Task", configMINIMAL_STACK_SIZE, NULL, uartSending_task_PRIORITY, NULL);
-	xTaskCreate(uartReceiving_task, "UartReceiving_Task", configMINIMAL_STACK_SIZE, NULL, uartReceiving_task_PRIORITY, NULL);
+	xTaskCreate(uartInit_task, "UartInit_Task", configMINIMAL_STACK_SIZE, NULL,uartInit_task_PRIORITY, NULL);
 	vTaskStartScheduler();
 
 	for(;;) { /* Infinite loop to avoid leaving the main function */

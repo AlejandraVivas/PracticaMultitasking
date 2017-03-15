@@ -25,8 +25,10 @@
 /*******************************************************************************
  * Prototypes
  ******************************************************************************/
-uint8_t uart_DataEcho(void);
-void uart_init(void);
+void uartInit_task(void *parameter);
+
+
+
 
 
 #endif /* SOURCE_UART_H_ */

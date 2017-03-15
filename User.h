@@ -12,12 +12,18 @@
 #include "queue.h"
 #include "stdio.h"
 #include "fsl_debug_console.h"
+#include "DataTypeDefinitions.h"
 
-
+#define OPTION_1 0x31
+#define OPTION_2 0x32
+#define OPTION_3 0x33
+#define ESC 0x1B
 
 void uartSending_task(void *parameter);
 void uartReceiving_task(void *parameter);
+void readMemory_task(void *parameter);
 void createQueues(void);
+
 
 
 
