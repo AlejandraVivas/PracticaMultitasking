@@ -38,7 +38,9 @@
 #include "pin_mux.h"
 #include "clock_config.h"
 #include "DataTypeDefinitions.h"
-#include "Buttons.h"
+#include "UART.h"
+#include "GlobalFunctions.h"
+#include "User.h"
 
 /* FreeRTOS kernel includes. */
 #include "FreeRTOS.h"
@@ -52,24 +54,61 @@
 #include "fsl_debug_console.h"
 #include "fsl_gpio.h"
 
+uint8_t buttonOneFlag = FALSE;
+uint8_t buttonTwoFlag = FALSE;
+uint8_t buttonThreeFlag = FALSE;
+uint8_t buttonFourFlag = FALSE;
+uint8_t buttonFiveFlag = FALSE;
+uint8_t buttonSixFlag = FALSE;
+
+uint32_t bitNumber = 0;
+
+
 
 
 /* Task priorities. */
-#define Buttons_task_PRIORITY (configMAX_PRIORITIES - 9)
+#define uartSending_task_PRIORITY (configMAX_PRIORITIES - 1)
+#define uartReceiving_task_PRIORITY (configMAX_PRIORITIES - 1)
 
 //Todo lo coppiado y pegado en Buttons.c
 
-void pressedButtons_task(void *pvParameters);
+void PORTC_IRQHandler(void)
+{
+	bitNumber = GPIO_GetPinsInterruptFlags(GPIOC);
+	switch(bitNumber)
+	{
+	case BIT5:
+		GPIO_ClearPinsInterruptFlags(GPIOC, BIT5);
+		buttonOneFlag = TRUE;
+	case BIT7:
+		GPIO_ClearPinsInterruptFlags(GPIOC, BIT7);
+		buttonTwoFlag = TRUE;
+	case BIT0:
+		GPIO_ClearPinsInterruptFlags(GPIOC, BIT0);
+		buttonThreeFlag = TRUE;
+	case BIT9:
+		GPIO_ClearPinsInterruptFlags(GPIOC, BIT9);
+		buttonFourFlag = TRUE;
+	case BIT8:
+		GPIO_ClearPinsInterruptFlags(GPIOC, BIT8);
+		buttonFiveFlag = TRUE;
+	case BIT1:
+		GPIO_ClearPinsInterruptFlags(GPIOC, BIT1);
+		buttonSixFlag = TRUE;
+	}
+
+}
 
 
 /*!
- * @brief Application entry point.
+ * @brief Application entry poin t.
  */
 int main(void) {
 	/* Init board hardware. */
 	BOARD_InitPins();
 	BOARD_BootClockRUN();
-	BOARD_InitDebugConsole();
+ 	BOARD_InitDebugConsole();
+ 	NVIC_SetPriority(DEMO_UART_RX_TX_IRQn, 5);
 	port_pin_config_t config =
 	{
 			kPORT_PullDisable,
@@ -81,28 +120,40 @@ int main(void) {
 			kPORT_UnlockRegister
 	};
 
-	PORT_SetPinConfig(PORTC, BOARD_SW3_GPIO_PIN, &config);
-	PORT_SetPinInterruptConfig(BOARD_SW3_PORT, BOARD_SW3_GPIO_PIN, kPORT_InterruptFallingEdge);
-	/* Enable the interrupt. */
-	NVIC_SetPriority( BOARD_SW3_IRQ, 5);
-	NVIC_EnableIRQ( BOARD_SW3_IRQ);
-
-	//PORT_SetPinMux(BOARD_SW3_GPIO, PIN4_IDX, kPORT_MuxAsGpio); /* PORTA4 (pin L7) is configured as PTA4 */
-	PORT_SetPinMux(BOARD_LED_RED_GPIO_PORT, BOARD_LED_RED_GPIO_PIN, kPORT_MuxAsGpio);
-	PORT_SetPinMux(BOARD_LED_GREEN_GPIO_PORT, BOARD_LED_GREEN_GPIO_PIN, kPORT_MuxAsGpio);
-	PORT_SetPinMux(BOARD_LED_BLUE_GPIO_PORT, BOARD_LED_BLUE_GPIO_PIN, kPORT_MuxAsGpio);
-
-	/* Define the init structure for the input switch pin */
-	gpio_pin_config_t sw_config = { kGPIO_DigitalInput, 0 };
-
-	GPIO_PinInit(BOARD_SW3_GPIO, BOARD_SW3_GPIO_PIN, &sw_config);
 	CLOCK_EnableClock(kCLOCK_PortA);
 	CLOCK_EnableClock(kCLOCK_PortB);
+	CLOCK_EnableClock(kCLOCK_PortC);
 	CLOCK_EnableClock(kCLOCK_PortE);
+
+	PORT_SetPinConfig(PORTC, BIT5, &config);
+	PORT_SetPinConfig(PORTC, BIT7, &config);
+	PORT_SetPinConfig(PORTC, BIT0, &config);
+	PORT_SetPinConfig(PORTC, BIT9, &config);
+	PORT_SetPinConfig(PORTC, BIT8, &config);
+	PORT_SetPinConfig(PORTC, BIT1, &config);
+
+	PORT_SetPinInterruptConfig(PORTC, BIT5, kPORT_InterruptFallingEdge);
+	PORT_SetPinInterruptConfig(PORTC, BIT7, kPORT_InterruptFallingEdge);
+	PORT_SetPinInterruptConfig(PORTC, BIT0, kPORT_InterruptFallingEdge);
+	PORT_SetPinInterruptConfig(PORTC, BIT9, kPORT_InterruptFallingEdge);
+	PORT_SetPinInterruptConfig(PORTC, BIT8, kPORT_InterruptFallingEdge);
+	PORT_SetPinInterruptConfig(PORTC, BIT1, kPORT_InterruptFallingEdge);
+
+
+	/* Enable the interrupt. */
+	NVIC_SetPriority( PORTC_IRQn, 1);
+	NVIC_EnableIRQ( PORTC_IRQn);
+
+	uart_init();
+
+	createQueues();
+
+
 	/* Add your code here */
 
 	/* Create RTOS task */
-	xTaskCreate(pressedButtons_task, "PressedButtons_task", configMINIMAL_STACK_SIZE, NULL, Buttons_task_PRIORITY, NULL);
+	xTaskCreate(uartSending_task, "UartSending_Task", configMINIMAL_STACK_SIZE, NULL, uartSending_task_PRIORITY, NULL);
+	xTaskCreate(uartReceiving_task, "UartReceiving_Task", configMINIMAL_STACK_SIZE, NULL, uartReceiving_task_PRIORITY, NULL);
 	vTaskStartScheduler();
 
 	for(;;) { /* Infinite loop to avoid leaving the main function */
@@ -110,5 +161,4 @@ int main(void) {
 	}
 }
 
-//pressedButtons_task
 
