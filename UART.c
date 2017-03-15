@@ -35,16 +35,17 @@ void uart_init(void)
 }
 
 
-uint8_t* uart_DataEcho(void)
+uint8_t uart_DataEcho(void)
 {
+	uint8_t data;
 	size_t n;
-
+	data = recv_buffer[0];
 	/* Send data */
 	UART_RTOS_Receive(&handle, recv_buffer, sizeof(recv_buffer), &n);
 	if (n > 0)        {
 		/* Echo the received data */
 		UART_RTOS_Send(&handle, (uint8_t *)recv_buffer, n);
-		return (uint8_t*)recv_buffer;
+		return data;
 	}
 }
 
