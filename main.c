@@ -67,9 +67,9 @@ uint32_t bitNumber = 0;
 
 
 /* Task priorities. */
-//#define uartSending_task_PRIORITY (configMAX_PRIORITIES - 1)
-//#define uartReceiving_task_PRIORITY (configMAX_PRIORITIES - 1)
-#define uartInit_task_PRIORITY (configMAX_PRIORITIES - 1)
+#define uartSending_task_PRIORITY (configMAX_PRIORITIES - 1)
+#define uartReceiving_task_PRIORITY (configMAX_PRIORITIES - 1)
+//#define uartInit_task_PRIORITY (configMAX_PRIORITIES - 1)
 //#define readMemory_task_PRIORITY (configMAX_PRIORITIES - 2)
 
 
@@ -112,7 +112,8 @@ int main(void) {
 	BOARD_InitPins();
 	BOARD_BootClockRUN();
  	BOARD_InitDebugConsole();
- 	NVIC_SetPriority(DEMO_UART_RX_TX_IRQn, 5);
+ 	NVIC_SetPriority(DEMO_UART0_RX_TX_IRQn, 5);
+ 	NVIC_SetPriority(DEMO_UART4_RX_TX_IRQn, 5);
 	port_pin_config_t config =
 	{
 			kPORT_PullDisable,
@@ -148,15 +149,14 @@ int main(void) {
 	NVIC_SetPriority( PORTC_IRQn, 1);
 	NVIC_EnableIRQ( PORTC_IRQn);
 
-	//createQueues();
-
-
+	uart0_init();
 
 
 	/* Add your code here */
 
 	/* Create RTOS task */
-	xTaskCreate(uartInit_task, "UartInit_Task", configMINIMAL_STACK_SIZE, NULL,uartInit_task_PRIORITY, NULL);
+	xTaskCreate(chat_task, "Chat", configMINIMAL_STACK_SIZE, NULL,1 , NULL);
+	//xTaskCreate(uartReceiving_task, "UartReceiving_Task", configMINIMAL_STACK_SIZE, NULL, uartReceiving_task_PRIORITY, NULL);
 	vTaskStartScheduler();
 
 	for(;;) { /* Infinite loop to avoid leaving the main function */
