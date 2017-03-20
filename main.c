@@ -40,6 +40,7 @@
 #include "DataTypeDefinitions.h"
 #include "UART.h"
 #include "GlobalFunctions.h"
+#include "SerialMenu.h"
 #include "User.h"
 
 /* FreeRTOS kernel includes. */
@@ -111,9 +112,9 @@ int main(void) {
 	/* Init board hardware. */
 	BOARD_InitPins();
 	BOARD_BootClockRUN();
- 	BOARD_InitDebugConsole();
- 	NVIC_SetPriority(DEMO_UART0_RX_TX_IRQn, 5);
- 	NVIC_SetPriority(DEMO_UART4_RX_TX_IRQn, 5);
+	BOARD_InitDebugConsole();
+	NVIC_SetPriority(DEMO_UART0_RX_TX_IRQn, 5);
+	NVIC_SetPriority(DEMO_UART3_RX_TX_IRQn, 5);
 	port_pin_config_t config =
 	{
 			kPORT_PullDisable,
@@ -130,7 +131,7 @@ int main(void) {
 	CLOCK_EnableClock(kCLOCK_PortC);
 	CLOCK_EnableClock(kCLOCK_PortE);
 
-	PORT_SetPinConfig(PORTC, BIT5, &config);
+ 	PORT_SetPinConfig(PORTC, BIT5, &config);
 	PORT_SetPinConfig(PORTC, BIT7, &config);
 	PORT_SetPinConfig(PORTC, BIT0, &config);
 	PORT_SetPinConfig(PORTC, BIT9, &config);
@@ -146,17 +147,19 @@ int main(void) {
 
 
 	/* Enable the interrupt. */
+
 	NVIC_SetPriority( PORTC_IRQn, 1);
 	NVIC_EnableIRQ( PORTC_IRQn);
 
 	uart0_init();
+	uart3_init();
 
 
 	/* Add your code here */
 
 	/* Create RTOS task */
-	xTaskCreate(chat_task, "Chat", configMINIMAL_STACK_SIZE, NULL,1 , NULL);
-	//xTaskCreate(uartReceiving_task, "UartReceiving_Task", configMINIMAL_STACK_SIZE, NULL, uartReceiving_task_PRIORITY, NULL);
+	xTaskCreate(mainMenu_task, "MainMenu_Task", configMINIMAL_STACK_SIZE, NULL,2, NULL);
+
 	vTaskStartScheduler();
 
 	for(;;) { /* Infinite loop to avoid leaving the main function */
