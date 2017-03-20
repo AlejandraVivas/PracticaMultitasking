@@ -5,8 +5,6 @@
  *      Author: Luis
  */
 
-#include "GPIO.h"
-#include "SPI.h"
 #include "LCDNokia5110.h"
 #include "DataTypeDefinitions.h"
 
@@ -110,7 +108,7 @@ static const uint8 ASCII[][5] =
 ,{0x78, 0x46, 0x41, 0x46, 0x78} // 7f
 };
 
-void LCDNokia_init(void) {
+void LCDNokia_init(void) { // Modificar esta funcion
 	GPIO_pinControlRegisterType pinControlRegister = GPIO_MUX1;
 
 	GPIO_clockGating(GPIOD);
@@ -142,7 +140,7 @@ void LCDNokia_bitmap(const uint8* my_array){
 
 
 
-void LCDNokia_writeByte(uint8 DataOrCmd, uint8 data)
+void LCDNokia_writeByte(uint8 DataOrCmd, uint8 data) // Modificar esta funcion
 {
 	if(DataOrCmd)
 		GPIO_setPIN(GPIOD, DATA_OR_CMD_PIN);
