@@ -8,8 +8,7 @@
 #include "GPIO.h"
 #include "SPI.h"
 #include "LCDNokia5110.h"
-
-
+#include "DataTypeDefinitions.h"
 
 static const uint8 ASCII[][5] =
 {
@@ -111,7 +110,6 @@ static const uint8 ASCII[][5] =
 ,{0x78, 0x46, 0x41, 0x46, 0x78} // 7f
 };
 
-
 void LCDNokia_init(void) {
 	GPIO_pinControlRegisterType pinControlRegister = GPIO_MUX1;
 
@@ -124,12 +122,11 @@ void LCDNokia_init(void) {
 	GPIO_pinControlRegister(GPIOD,RESET_PIN,&pinControlRegister);
   //Configure control pins
 	
-
 	GPIO_clearPIN(GPIOD, RESET_PIN);
 	LCD_delay();
 	GPIO_setPIN(GPIOD, RESET_PIN);
 	LCDNokia_writeByte(LCD_CMD, 0x21); //Tell LCD that extended commands follow
-	LCDNokia_writeByte(LCD_CMD, 0xBF); //Set LCD Vop (Contrast): Try 0xB1(good @ 3.3V) or 0xBF if your display is too dark
+	LCDNokia_writeByte(LCD_CMD, 0xB1); //Set LCD Vop (Contrast): Try 0xB1(good @ 3.3V) or 0xBF if your display is too dark
 	LCDNokia_writeByte(LCD_CMD, 0x04); //Set Temp coefficent
 	LCDNokia_writeByte(LCD_CMD, 0x14); //LCD bias mode 1:48: Try 0x13 or 0x14
 
