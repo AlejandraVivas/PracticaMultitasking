@@ -32,8 +32,6 @@
  * This is template for main module created by New Kinetis SDK 2.x Project Wizard. Enjoy!
  **/
 
-#include <string.h>
-
 #include "board.h"
 #include "pin_mux.h"
 #include "clock_config.h"
@@ -48,6 +46,8 @@
 #include "task.h"
 #include "queue.h"
 #include "timers.h"
+#include "semphr.h"
+#include "string.h"
 
 /* SDK drivers*/
 #include "fsl_port.h"
@@ -68,11 +68,6 @@ uint32_t bitNumber = 0;
 
 
 /* Task priorities. */
-#define uartSending_task_PRIORITY (configMAX_PRIORITIES - 1)
-#define uartReceiving_task_PRIORITY (configMAX_PRIORITIES - 1)
-//#define uartInit_task_PRIORITY (configMAX_PRIORITIES - 1)
-//#define readMemory_task_PRIORITY (configMAX_PRIORITIES - 2)
-
 
 
 //Todo lo coppiado y pegado en Buttons.c
@@ -110,6 +105,7 @@ void PORTC_IRQHandler(void)
  */
 int main(void) {
 	/* Init board hardware. */
+
 	BOARD_InitPins();
 	BOARD_BootClockRUN();
 	BOARD_InitDebugConsole();
@@ -129,6 +125,7 @@ int main(void) {
 	CLOCK_EnableClock(kCLOCK_PortA);
 	CLOCK_EnableClock(kCLOCK_PortB);
 	CLOCK_EnableClock(kCLOCK_PortC);
+	CLOCK_EnableClock(kCLOCK_PortE);
 	CLOCK_EnableClock(kCLOCK_PortE);
 
  	PORT_SetPinConfig(PORTC, BIT5, &config);
@@ -158,7 +155,7 @@ int main(void) {
 	/* Add your code here */
 
 	/* Create RTOS task */
-	xTaskCreate(mainMenu_task, "MainMenu_Task", configMINIMAL_STACK_SIZE, NULL,2, NULL);
+	xTaskCreate(mainMenu_task, "MainMenu_Task", 90, NULL,1, NULL);
 
 	vTaskStartScheduler();
 

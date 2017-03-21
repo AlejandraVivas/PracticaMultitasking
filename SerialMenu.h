@@ -32,10 +32,11 @@
 
 
 
-void mainMenu_task(void *parameter);
-void chat_task(void *parameter);
+void mainMenu_task(void *pvParameters);
+void chat_task(void *pvParameters);
+TaskHandle_t optionEightHandler();
+void CreateChatTask(void);
 
-TaskHandle_t OptionEightHandle(void);
 
 
 #endif /* SOURCE_SERIALMENU_H_ */

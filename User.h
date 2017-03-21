@@ -15,15 +15,12 @@
 #include "DataTypeDefinitions.h"
 #include "SerialMenu.h"
 
-#define OPTION_1 0x31
-#define OPTION_2 0x32
-#define OPTION_3 0x33
 #define ENTER 0xD
 
+#define TERMINALONE 1
+#define TERMINALTWO 2
 
-void uartSending_task(void *parameter);
-void uartReceiving_task(void *parameter);
-void readMemory_task(void *parameter);
+
 void createQueues(void);
 
 

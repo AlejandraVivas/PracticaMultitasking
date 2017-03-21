@@ -7,8 +7,7 @@
 
 #include "SerialMenu.h"
 
-TaskHandle_t chatHandle;
-
+TaskHandle_t chatHandle = NULL;
 uint8_t clearingCommand[] = "\033[0;30;46m"; //clearing screen
 uint8_t blueScreeCommand[] = "\033[2J"; //Blue background and white letters
 uint8_t xandyPositioning[] = "\033[1;1H"; //x and y cursor position
@@ -42,6 +41,10 @@ uint8_t optionSevenlag = FALSE;
 uint8_t optionEightFlag = FALSE;
 uint8_t optionNineFlag = FALSE;
 
+uint8_t TerminalOneChat;
+uint8_t TerminalTwoChat;
+
+
 
 uart_handle_t g_uart0Handle;
 uart_handle_t g_uart3Handle;
@@ -65,6 +68,7 @@ void DEMO_UART0_IRQHandler(void)
 	{
 		uart0Data = UART_ReadByte(DEMO_UART0);
 		optionFlag = uart0Data;
+		TerminalOneChat = UART0FLAG;
 		if (((rxIndexUart0 + 1) % 16) != txIndexUart0)
 		{
 			demoRingBufferUart0[rxIndexUart0] = uart0Data;
@@ -82,6 +86,7 @@ void DEMO_UART3_IRQHandler(void)
 	{
 		uart3Data = UART_ReadByte(DEMO_UART3);
 		optionFlag = UART_ReadByte(DEMO_UART3);
+		TerminalTwoChat = UART3FLAG;
 		if (((rxIndexUart3 + 1) % 16) != txIndexUart3)
 		{
 			demoRingBufferUart3[rxIndexUart3] = uart0Data;
@@ -93,7 +98,7 @@ void DEMO_UART3_IRQHandler(void)
 
 
 
-void mainMenu_task(void *parameter)
+void mainMenu_task(void *pvParameters)
 {
 	UART_WriteBlocking(DEMO_UART0, clearingCommand, sizeof(clearingCommand) / sizeof(clearingCommand[0]));
 	UART_WriteBlocking(DEMO_UART0, blueScreeCommand, sizeof(blueScreeCommand) / sizeof(blueScreeCommand[0]));
@@ -158,23 +163,18 @@ void mainMenu_task(void *parameter)
 		switch(uartFlag)
 		{
 		case UART0FLAG:
-
 			if(TRUE == optionEightFlag)
 			{
-				if(ESC != uart0Data)
-				{
-					xTaskCreate(chat_task, "Chat", configMINIMAL_STACK_SIZE, NULL,1 , chatHandle);
-				}
-				else if(ESC == uart0Data)
-				{
-					vTaskDelete(chatHandle);
-				}
+					CreateChatTask();
+					void mainMenu_task(void *pvParameters);
+					optionEightFlag = FALSE;
+
 			}
 			break;
 		case UART3FLAG:
 			if(TRUE == optionEightFlag)
 			{
-				xTaskCreate(chat_task, "Chat", configMINIMAL_STACK_SIZE, NULL,2 , chatHandle);
+				//xTaskCreate(chat_task, "Chat_Task", configMINIMAL_STACK_SIZE, NULL,2 , chatHandle);
 				break;
 			}
 		}
@@ -183,7 +183,11 @@ void mainMenu_task(void *parameter)
 }
 
 
-TaskHandle_t OptionEightHandle(void)
+void CreateChatTask(void)
 {
-	return &chatHandle;
+	xTaskCreate(chat_task, "Chat_Task", configMINIMAL_STACK_SIZE, NULL,2 , &chatHandle);
+}
+
+TaskHandle_t optionEightHandler(){
+return &chatHandle;
 }
