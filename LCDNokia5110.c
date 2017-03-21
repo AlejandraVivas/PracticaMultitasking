@@ -137,19 +137,23 @@ void LCDNokia_init(void) { // Modificar esta funcion
 
 	// Control Pins
 	GPIO_ClearPinsOutput(GPIOD, 1 << RESET_PIN );
+	//LCD_delay();
 	GPIO_SetPinsOutput(GPIOD, 1 << RESET_PIN );
 
-	/*GPIO_dataDirectionPIN(GPIOD,GPIO_OUTPUT,DATA_OR_CMD_PIN);
-	GPIO_pinControlRegister(GPIOD,BIT3,&pinControlRegister);
+	/*
+	  //Configure control pins
+		GPIO_clearPIN(GPIOD, RESET_PIN);
+		LCD_delay();
+		GPIO_setPIN(GPIOD, RESET_PIN);*/
+	/*
+	 * GPIO_dataDirectionPIN(GPIOD,GPIO_OUTPUT,DATA_OR_CMD_PIN);
+	 * GPIO_pinControlRegister(GPIOD,BIT3,&pinControlRegister);
 	
 	GPIO_clockGating(GPIOD);
 	GPIO_dataDirectionPIN(GPIOD,GPIO_OUTPUT,RESET_PIN);
-	GPIO_pinControlRegister(GPIOD,RESET_PIN,&pinControlRegister);
-  //Configure control pins
-	
-	GPIO_clearPIN(GPIOD, RESET_PIN);
-	LCD_delay();
-	GPIO_setPIN(GPIOD, RESET_PIN);*/
+	GPIO_pinControlRegister(GPIOD,RESET_PIN,&pinControlRegister);*/
+
+
 
 	LCDNokia_writeByte(LCD_CMD, 0x21); //Tell LCD that extended commands follow
 	LCDNokia_writeByte(LCD_CMD, 0xB1); //Set LCD Vop (Contrast): Try 0xB1(good @ 3.3V) or 0xBF if your display is too dark
@@ -175,6 +179,7 @@ void LCDNokia_writeByte(uint8 DataOrCmd, uint8 data) // Modificar esta funcion
 	else
 		GPIO_clearPIN(GPIOD, DATA_OR_CMD_PIN);
 	
+
 	SPI_startTranference(SPI_0);
 	SPI_sendOneByte(data);
 	SPI_stopTranference(SPI_0);
