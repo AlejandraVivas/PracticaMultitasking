@@ -52,8 +52,6 @@
 
 #include "Memory.h"
 
-#include "fsl_dspi.h"
-
 
 static status_t SPI_init(void){
 

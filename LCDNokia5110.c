@@ -7,6 +7,11 @@
 
 #include "LCDNokia5110.h"
 #include "DataTypeDefinitions.h"
+#include "fsl_dspi.h"
+#include "fsl_port.h"
+#include "fsl_gpio.h"
+
+dspi_master_config_t master_Config;
 
 static const uint8 ASCII[][5] =
 {
@@ -109,10 +114,32 @@ static const uint8 ASCII[][5] =
 };
 
 void LCDNokia_init(void) { // Modificar esta funcion
-	GPIO_pinControlRegisterType pinControlRegister = GPIO_MUX1;
+	//GPIO_pinControlRegisterType pinControlRegister = GPIO_MUX1;
 
-	GPIO_clockGating(GPIOD);
-	GPIO_dataDirectionPIN(GPIOD,GPIO_OUTPUT,DATA_OR_CMD_PIN);
+	CLOCK_EnableClock(kCLOCK_PortD); //GPIO_clockGating(GPIOD);
+	PORT_SetPinMux(PORTD, 1 ,kPORT_MuxAlt2);
+	PORT_SetPinMux(PORTD, 2 ,kPORT_MuxAlt2);
+
+	gpio_pin_config_t config_GPIO =
+	{
+			kGPIO_DigitalOutput,
+			0
+	};
+
+	PORT_SetPinMux(PORTD, DATA_OR_CMD_PIN ,kPORT_MuxAsGpio );
+	PORT_SetPinMux(PORTD, RESET_PIN 	  ,kPORT_MuxAsGpio );
+
+	GPIO_PinInit(GPIOD, DATA_OR_CMD_PIN, &config_GPIO);
+	GPIO_PinInit(GPIOD, RESET_PIN, 		 &config_GPIO);
+
+	DSPI_MasterGetDefaultConfig(&master_Config);
+	DSPI_MasterInit(SPI0, &master_Config, CLOCK_GetFreq(DSPI0_CLK_SRC) );
+
+	// Control Pins
+	GPIO_ClearPinsOutput(GPIOD, 1 << RESET_PIN );
+	GPIO_SetPinsOutput(GPIOD, 1 << RESET_PIN );
+
+	/*GPIO_dataDirectionPIN(GPIOD,GPIO_OUTPUT,DATA_OR_CMD_PIN);
 	GPIO_pinControlRegister(GPIOD,BIT3,&pinControlRegister);
 	
 	GPIO_clockGating(GPIOD);
@@ -122,7 +149,8 @@ void LCDNokia_init(void) { // Modificar esta funcion
 	
 	GPIO_clearPIN(GPIOD, RESET_PIN);
 	LCD_delay();
-	GPIO_setPIN(GPIOD, RESET_PIN);
+	GPIO_setPIN(GPIOD, RESET_PIN);*/
+
 	LCDNokia_writeByte(LCD_CMD, 0x21); //Tell LCD that extended commands follow
 	LCDNokia_writeByte(LCD_CMD, 0xB1); //Set LCD Vop (Contrast): Try 0xB1(good @ 3.3V) or 0xBF if your display is too dark
 	LCDNokia_writeByte(LCD_CMD, 0x04); //Set Temp coefficent
