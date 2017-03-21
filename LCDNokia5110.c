@@ -153,8 +153,6 @@ void LCDNokia_init(void) { // Modificar esta funcion
 	GPIO_dataDirectionPIN(GPIOD,GPIO_OUTPUT,RESET_PIN);
 	GPIO_pinControlRegister(GPIOD,RESET_PIN,&pinControlRegister);*/
 
-
-
 	LCDNokia_writeByte(LCD_CMD, 0x21); //Tell LCD that extended commands follow
 	LCDNokia_writeByte(LCD_CMD, 0xB1); //Set LCD Vop (Contrast): Try 0xB1(good @ 3.3V) or 0xBF if your display is too dark
 	LCDNokia_writeByte(LCD_CMD, 0x04); //Set Temp coefficent
@@ -170,19 +168,18 @@ void LCDNokia_bitmap(const uint8* my_array){
 	  LCDNokia_writeByte(LCD_DATA, *(my_array+index));
 }
 
-
-
 void LCDNokia_writeByte(uint8 DataOrCmd, uint8 data) // Modificar esta funcion
 {
+
 	if(DataOrCmd)
-		GPIO_setPIN(GPIOD, DATA_OR_CMD_PIN);
+		GPIO_SetPinsOutput(GPIOD, DATA_OR_CMD_PIN); //GPIO_setPIN(GPIOD, DATA_OR_CMD_PIN);
 	else
-		GPIO_clearPIN(GPIOD, DATA_OR_CMD_PIN);
+		GPIO_ClearPinsOutput(GPIOD, DATA_OR_CMD_PIN); //
 	
 
-	SPI_startTranference(SPI_0);
+	DSPI_StartTranference(SPI0);
 	SPI_sendOneByte(data);
-	SPI_stopTranference(SPI_0);
+	DSPI_stopTranference(SPI0);
 }
 
 void LCDNokia_sendChar(uint8 character) {
