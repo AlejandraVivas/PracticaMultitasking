@@ -159,7 +159,7 @@ void LCDNokia_init(void) { // Modificar esta funcion
 	LCDNokia_writeByte(LCD_CMD, 0x04); //Set Temp coefficent
 	LCDNokia_writeByte(LCD_CMD, 0x14); //LCD bias mode 1:48: Try 0x13 or 0x14
 
-	LCDNokia_writeByte (LCD_CMD, 0x20); //We must send 0x20 before modifying the display control mode
+	LCDNokia_writeByte   (LCD_CMD, 0x20); //We must send 0x20 before modifying the display control mode
 	LCDNokia_writeByte(LCD_CMD, 0x0C); //Set display control, normal mode. 0x0D for inverse
 }
 
