@@ -12,6 +12,7 @@
 #include "fsl_gpio.h"
 
 dspi_master_config_t master_Config;
+dspi_command_data_config_t command;
 
 static const uint8 ASCII[][5] =
 {
@@ -158,7 +159,7 @@ void LCDNokia_init(void) { // Modificar esta funcion
 	LCDNokia_writeByte(LCD_CMD, 0x04); //Set Temp coefficent
 	LCDNokia_writeByte(LCD_CMD, 0x14); //LCD bias mode 1:48: Try 0x13 or 0x14
 
-	LCDNokia_writeByte(LCD_CMD, 0x20); //We must send 0x20 before modifying the display control mode
+	LCDNokia_writeByte (LCD_CMD, 0x20); //We must send 0x20 before modifying the display control mode
 	LCDNokia_writeByte(LCD_CMD, 0x0C); //Set display control, normal mode. 0x0D for inverse
 }
 
@@ -177,9 +178,9 @@ void LCDNokia_writeByte(uint8 DataOrCmd, uint8 data) // Modificar esta funcion
 		GPIO_ClearPinsOutput(GPIOD, DATA_OR_CMD_PIN); //
 	
 
-	DSPI_StartTranference(SPI0);
-	SPI_sendOneByte(data);
-	DSPI_stopTranference(SPI0);
+	DSPI_StartTransfer(SPI0);
+	DSPI_MasterWriteDataBlocking(SPI0, &command, data);
+	DSPI_StopTransfer(SPI0);
 }
 
 void LCDNokia_sendChar(uint8 character) {
@@ -220,4 +221,37 @@ void LCD_delay(void)
 		
 	}
 }
+
+void LCD_PrintTask(void *pvParameters)
+{
+	LCDNokia_init();
+	for(;;)
+	{
+
+	}
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 

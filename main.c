@@ -52,14 +52,12 @@
 
 #include "Memory.h"
 
-
-static status_t SPI_init(void){
-
-}
+#include "LCDNokia5110.h"
 
 
 #define Memory_setup_writetask_PRIORITY (4)
 #define Memory_setup_readtask_PRIORITY (3)
+#define LCD_setup_writetask_PRIORITY (4)
 
 int main(void) {
   /* Init board hardware. */
@@ -72,8 +70,9 @@ int main(void) {
   /* Add your code here */
 
   /* Create RTOS task */
-  xTaskCreate( Memory_readTask,"Memoryread", 4*configMINIMAL_STACK_SIZE, NULL, Memory_setup_readtask_PRIORITY, NULL);
-  xTaskCreate( Memory_writeTask,"Memorywrite", 4*configMINIMAL_STACK_SIZE, NULL, Memory_setup_writetask_PRIORITY, NULL);
+  //xTaskCreate( Memory_readTask,"Memoryread", 4*configMINIMAL_STACK_SIZE, NULL, Memory_setup_readtask_PRIORITY, NULL);
+  //xTaskCreate( Memory_writeTask,"Memorywrite", 4*configMINIMAL_STACK_SIZE, NULL, Memory_setup_writetask_PRIORITY, NULL);
+  xTaskCreate( LCD_PrintTask,"LCD_write", 4*configMINIMAL_STACK_SIZE, NULL, LCD_setup_writetask_PRIORITY, NULL);
 
 
   vTaskStartScheduler();

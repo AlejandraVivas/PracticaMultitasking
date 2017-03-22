@@ -37,6 +37,8 @@ void LCDNokia_sendString(uint8*);
 /*It used in the initialisation routine*/
 void LCD_delay(void);
 
+void LCD_PrintTask(void *pvParameters);
+
 
 
 #endif /* LCDNOKIA5110_H_ */
