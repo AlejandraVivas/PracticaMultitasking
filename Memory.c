@@ -25,6 +25,7 @@ static i2c_rtos_handle_t i2c_handler;
 port_pin_config_t pin;
 #define Memory_Slave_Address (0x6F)
 static i2c_master_transfer_t i2c_transfer;
+EventGroupHandle_t xEvents;
 
 /*status_t MEMORY_checkError(void){
 	status_t i2c_status = kStatus_Success;
@@ -95,6 +96,7 @@ void Memory_writeTask(void *pvParameters){
 
 	for(;;)
 	{
+		//xEventGroupWaitBits(xEvents, (READENABLE), , , portMAX_DELAY);
 		i2c_transfer.flags = kI2C_TransferDefaultFlag; /* A transfer flag which controls the transfer. */
 		i2c_transfer.slaveAddress = Memory_Slave_Address; /* 7-bit slave address. */
 		i2c_transfer.direction = kI2C_Write; /* A transfer direction, read or write. */
@@ -104,6 +106,8 @@ void Memory_writeTask(void *pvParameters){
 		i2c_transfer.dataSize = 1; /* A transfer size. */
 
 		i2c_status = I2C_RTOS_Transfer(&i2c_handler, &i2c_transfer); // i2c WRITE STATUS
+		//quesend
+		//xEventGroupSetBits(xEvents, (WRITEDENABLE));
 		// readen data will be in i2c_transfer slots
 	 }
 }
