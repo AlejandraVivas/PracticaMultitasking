@@ -23,6 +23,52 @@ uint8_t readDateString[] = "7) Leer Fecha\r\n";
 uint8_t chatString[] = "8) Comunicacion con terminal 2\r\n";
 uint8_t ecoString[] = "9) Eco en LCD\r\n";
 uint8_t NewLineString[] = "\r\n";
+uint8_t pressKeyToContinueString[] = "Presione cualquier letra para continuar\r";
+
+
+/*Read Memory Menu*/
+uint8_t memoryDirectionString[] = "Direccion de Lectura:\r";
+uint8_t lenghtToReadString[] = "Longitud en bytes:\r";
+uint8_t contentString[] = "Contenido:\r";
+
+/*Write Memory Menu*/
+uint8_t memoryWriteDirectionString[] = "Direccion de Escritura:\r";
+uint8_t savedTextString[] = "Texto a guardar:\r";
+uint8_t savedString[] = "Su texto ha sido guardado";
+
+/*Set hour Menu*/
+uint8_t setNewHourString[] = "Escribir hora en formato hh/mm/ss:\r";
+uint8_t savedHourString[] = "La hora ha sido cambiada\r";
+
+/*Set Date Menu*/
+uint8_t setNewDateString[] = "Escribir fecha en formato dd/mm/aa:\r";
+uint8_t savedDateString[] = "La fecha ha sido cambiada\r";
+
+/*Set Format Menu*/
+uint8_t setNewFormatString[] = "Para cambiar el formato de hora presione 1\r";
+
+/*Read Hour Menu*/
+uint8_t readActualHourString[] = "La hora actual es:\r";
+
+/*Read Date Menu*/
+uint8_t readActualDateString[] = "La fecha actual es:\r";
+
+/*Chat Menu*/
+uint8_t showingChatString[] = "Chat:\r";
+
+/*Eco Menu*/
+uint8_t ecoLcdString[] = "Eco en pantalla LCD\r";
+
+
+uint8_t adjust1[] = "\033[1;1H";
+uint8_t adjust2[] = "\033[2;1H";
+uint8_t adjust3[] = "\033[1;23H";
+uint8_t adjust4[] = "\033[3;1H";
+uint8_t adjust5[] = "\033[2;23H";
+uint8_t adjust6[] = "\033[1;32H";
+uint8_t adjust7[] = "\033[2;33H";
+uint8_t adjust8[] = "\033[2;30H";
+uint8_t adjust9[] = "\033[1;33H";
 
 uint8_t uart0Data;
 uint8_t uart3Data;
@@ -59,12 +105,12 @@ EventGroupHandle_t NewDataUart3; /**Indicates that new data has arrived*///UART4
 
 SemaphoreHandle_t Mutex_ReadMem;       //Option 1
 SemaphoreHandle_t Mutex_WriteMem;      //Option 2
-SemaphoreHandle_t Mutex_SetTime;       //Option 3
+SemaphoreHandle_t Mutex_SetHour;       //Option 3
 SemaphoreHandle_t Mutex_SetDate;       //Option 4
 SemaphoreHandle_t Mutex_SetFormat;     //Option 5
-SemaphoreHandle_t Mutex_ReadTime;      //Option 6
+SemaphoreHandle_t Mutex_ReadHour;      //Option 6
 SemaphoreHandle_t Mutex_ReadDate;      //Option 7
-SemaphoreHandle_t Mutex_SPI;           //Option 9
+SemaphoreHandle_t Mutex_Eco;           //Option 9
 
 void createSemaphoreMutex(void)
 {
@@ -77,14 +123,14 @@ void createSemaphoreMutex(void)
 	Event_uartHandle3 = xEventGroupCreate();
 
 	/**Mutexs to prevent two terminals entering the same menu*/
-	Mutex_ReadMem  = xSemaphoreCreateMutex();
+	Mutex_ReadMem  = xSemaphoreCreateMutex();  //Option1
 	Mutex_WriteMem = xSemaphoreCreateMutex();  //Option 2
-	Mutex_SetTime  = xSemaphoreCreateMutex();  //Option 3
+	Mutex_SetHour  = xSemaphoreCreateMutex();  //Option 3
 	Mutex_SetDate  = xSemaphoreCreateMutex();  //Option 4
 	Mutex_SetFormat = xSemaphoreCreateMutex(); //Option 5
-	Mutex_ReadTime  = xSemaphoreCreateMutex(); //Option 6
+	Mutex_ReadHour  = xSemaphoreCreateMutex(); //Option 6
 	Mutex_ReadDate  = xSemaphoreCreateMutex(); //Option 7
-	Mutex_SPI       = xSemaphoreCreateMutex(); //Option 9
+	Mutex_Eco       = xSemaphoreCreateMutex(); //Option 9
 }
 
 void DEMO_UART0_IRQHandler(void)
@@ -121,9 +167,6 @@ void DEMO_UART3_IRQHandler(void)
 }
 
 
-
-
-
 void mainMenu0_task(void *pvParameters)
 {
 	for(;;)
@@ -137,21 +180,231 @@ void mainMenu0_task(void *pvParameters)
 				case OPTION_1:
 					if(xSemaphoreTake(Mutex_ReadMem,1))
 					{
-
+						printingReadMemMenu(DEMO_UART0);
+						xEventGroupSetBits(Event_uartHandle0, MENU_OP1);
 					}
+					break;
+				case OPTION_2:
+					if(xSemaphoreTake(Mutex_WriteMem,1))
+					{
+						printingWriteMemMenu(DEMO_UART0);
+						xEventGroupSetBits(Event_uartHandle0,MENU_OP2);
+					}
+					break;
+				case OPTION_3:
+					if(xSemaphoreTake(Mutex_SetHour,1))
+					{
+						printingSetHourMenu(DEMO_UART0);
+						xEventGroupSetBits(Event_uartHandle0, MENU_OP3);
+					}
+					break;
+				case OPTION_4:
+					if(xSemaphoreTake(Mutex_SetDate,1))
+					{
+						printingSetDateMenu(DEMO_UART0);
+						xEventGroupSetBits(Event_uartHandle0, MENU_OP4);
+					}
+					break;
+				case OPTION_5:
+					if(xSemaphoreTake(Mutex_SetFormat,1))
+					{
+						printingSetFormatMenu(DEMO_UART0);
+						xEventGroupSetBits(Event_uartHandle0, MENU_OP5);
+					}
+					break;
+				case OPTION_6:
+					if(xSemaphoreTake(Mutex_ReadHour,1))
+					{
+						printingReadHourMenu(DEMO_UART0);
+						xEventGroupSetBits(Event_uartHandle0, MENU_OP6);
+					}
+					break;
+				case OPTION_7:
+					if(xSemaphoreTake(Mutex_ReadDate,1))
+					{
+						printingReadDateMenu(DEMO_UART0);
+						xEventGroupSetBits(Event_uartHandle0,MENU_OP7);
+					}
+					break;
+				case OPTION_8:
+					printingChatMenu(DEMO_UART0);
+					xEventGroupSetBits(Event_uartHandle0,MENU_OP8);
+					break;
+				case OPTION_9:
+					if(xSemaphoreTake(Mutex_Eco,1))
+					{
+						printingEcoMenu(DEMO_UART0);
+						xEventGroupSetBits(Event_uartHandle0, MENU_OP9);
+					}
+					break;
+				default:
+					break;
 				}
 			}
 		}
-	}
-}
+		else if(uart0Data == ESCTERA)
+		{
+			if(MENU_OP1 == xEventGroupGetBits(Event_uartHandle0))
+			{
+				xSemaphoreGive(Mutex_ReadMem);
+			}
+			else if(MENU_OP2 == xEventGroupGetBits(Event_uartHandle0))
+			{
+				xSemaphoreGive(Mutex_WriteMem);
+			}
+			else if(MENU_OP3 == xEventGroupGetBits(Event_uartHandle0))
+			{
+				xSemaphoreGive(Mutex_SetHour);
+			}
+			else if(MENU_OP4 == xEventGroupGetBits(Event_uartHandle0))
+			{
+				xSemaphoreGive(Mutex_SetDate);
+			}
+			else if(MENU_OP5 == xEventGroupGetBits(Event_uartHandle0))
+			{
+				xSemaphoreGive(Mutex_SetFormat);
+			}
+			else if(MENU_OP6 == xEventGroupGetBits(Event_uartHandle0))
+			{
+				xSemaphoreGive(Mutex_ReadHour);
+			}
+			else if(MENU_OP7 == xEventGroupGetBits(Event_uartHandle0))
+			{
+				xSemaphoreGive(Mutex_ReadDate);
+			}
+			else if(MENU_OP9 == xEventGroupGetBits(Event_uartHandle0))
+			{
+				xSemaphoreGive(Mutex_Eco);
+			}
+			xEventGroupClearBits(Event_uartHandle0, MENU_OP1 | MENU_OP2 | MENU_OP3 | MENU_OP4 | MENU_OP5
+					| MENU_OP6 | MENU_OP7 | MENU_OP8 | MENU_OP9);
 
+			printingMenu(DEMO_UART0);
+		}
+		vTaskDelay(1);
+	}
+	taskYIELD();
+}
 
 void mainMenu3_task(void *pvParameters)
 {
 	for(;;)
 	{
 
+		if(!xEventGroupGetBits(Event_uartHandle3))
+		{
+			if(xSemaphoreTakeFromISR(NewDataUart3,pxHigherPriorityTaskWoken))
+			{
+				switch(uart3Data)
+				{
+				case OPTION_1:
+					if(xSemaphoreTake(Mutex_ReadMem,1))
+					{
+						printingReadMemMenu(DEMO_UART3);
+						xEventGroupSetBits(Event_uartHandle3, MENU_OP1);
+					}
+					break;
+				case OPTION_2:
+					if(xSemaphoreTake(Mutex_WriteMem,1))
+					{
+						printingWriteMemMenu(DEMO_UART3);
+						xEventGroupSetBits(Event_uartHandle3,MENU_OP2);
+					}
+					break;
+				case OPTION_3:
+					if(xSemaphoreTake(Mutex_SetHour,1))
+					{
+						printingSetHourMenu(DEMO_UART3);
+						xEventGroupSetBits(Event_uartHandle3, MENU_OP3);
+					}
+					break;
+				case OPTION_4:
+					if(xSemaphoreTake(Mutex_SetDate,1))
+					{
+						printingSetDateMenu(DEMO_UART3);
+						xEventGroupSetBits(Event_uartHandle3, MENU_OP4);
+					}
+					break;
+				case OPTION_5:
+					if(xSemaphoreTake(Mutex_SetFormat,1))
+					{
+						printingSetFormatMenu(DEMO_UART3);
+						xEventGroupSetBits(Event_uartHandle3, MENU_OP5);
+					}
+					break;
+				case OPTION_6:
+					if(xSemaphoreTake(Mutex_ReadHour,1))
+					{
+						printingReadHourMenu(DEMO_UART3);
+						xEventGroupSetBits(Event_uartHandle3, MENU_OP6);
+					}
+					break;
+				case OPTION_7:
+					if(xSemaphoreTake(Mutex_ReadDate,1))
+					{
+						printingReadDateMenu(DEMO_UART3);
+						xEventGroupSetBits(Event_uartHandle3,MENU_OP7);
+					}
+					break;
+				case OPTION_8:
+					printingChatMenu(DEMO_UART3);
+					xEventGroupSetBits(Event_uartHandle3,MENU_OP8);
+					break;
+				case OPTION_9:
+					if(xSemaphoreTake(Mutex_Eco,1))
+					{
+						printingEcoMenu(DEMO_UART3);
+						xEventGroupSetBits(Event_uartHandle3, MENU_OP9);
+					}
+					break;
+				default:
+					break;
+				}
+			}
+		}
+		else if(uart3Data == ESCTERA)
+		{
+			if(MENU_OP1 == xEventGroupGetBits(Event_uartHandle3))
+			{
+				xSemaphoreGive(Mutex_ReadMem);
+			}
+			else if(MENU_OP2 == xEventGroupGetBits(Event_uartHandle3))
+			{
+				xSemaphoreGive(Mutex_WriteMem);
+			}
+			else if(MENU_OP3 == xEventGroupGetBits(Event_uartHandle3))
+			{
+				xSemaphoreGive(Mutex_SetHour);
+			}
+			else if(MENU_OP4 == xEventGroupGetBits(Event_uartHandle3))
+			{
+				xSemaphoreGive(Mutex_SetDate);
+			}
+			else if(MENU_OP5 == xEventGroupGetBits(Event_uartHandle3))
+			{
+				xSemaphoreGive(Mutex_SetFormat);
+			}
+			else if(MENU_OP6 == xEventGroupGetBits(Event_uartHandle3))
+			{
+				xSemaphoreGive(Mutex_ReadHour);
+			}
+			else if(MENU_OP7 == xEventGroupGetBits(Event_uartHandle3))
+			{
+				xSemaphoreGive(Mutex_ReadDate);
+			}
+			else if(MENU_OP9 == xEventGroupGetBits(Event_uartHandle3))
+			{
+				xSemaphoreGive(Mutex_Eco);
+			}
+			xEventGroupClearBits(Event_uartHandle3, MENU_OP1 | MENU_OP2 | MENU_OP3 | MENU_OP4 | MENU_OP5
+					| MENU_OP6 | MENU_OP7 | MENU_OP8 | MENU_OP9);
+
+			printingMenu(DEMO_UART3);
+		}
+		vTaskDelay(1);
+
 	}
+	taskYIELD();
 }
 
 void printingMenu(UART_Type *base)
@@ -175,6 +428,9 @@ void printingMenu(UART_Type *base)
 	}
 	else if(UART3 == base)
 	{
+		UART_WriteBlocking(DEMO_UART3, clearingCommand, sizeof(clearingCommand) / sizeof(clearingCommand[0]));
+		UART_WriteBlocking(DEMO_UART3, blueScreeCommand, sizeof(blueScreeCommand) / sizeof(blueScreeCommand[0]));
+		UART_WriteBlocking(DEMO_UART3, xandyPositioning, sizeof(xandyPositioning) / sizeof(xandyPositioning[0]));
 		UART_WriteBlocking(DEMO_UART3, menuString, sizeof(menuString) / sizeof(menuString[0]));
 		UART_WriteBlocking(DEMO_UART3, optionString, sizeof(optionString) / sizeof(optionString[0]));
 		UART_WriteBlocking(DEMO_UART3, readMemoryString, sizeof(readMemoryString) / sizeof(readMemoryString[0]));
@@ -189,8 +445,6 @@ void printingMenu(UART_Type *base)
 	}
 }
 
-
-
 void readingI2C_task(void *pvParameters)
 {
 
@@ -202,9 +456,6 @@ void readingI2C_task(void *pvParameters)
 	static uint16 numberOfBytes; /**length of the string we're reading*/
 	static uint8 *readValue;
 
-	uint8_t memoryDirectionString[] = "Direccion de Lectura: ";
-	uint8_t lenghtToReadString[] = "Longitud en bytes: ";
-	uint8_t contentString[] = "Contenido: ";
 	for(;;)
 	{
 		if(uartFlag ==  UART0FLAG)
@@ -229,182 +480,327 @@ void readingI2C_task(void *pvParameters)
 		{
 
 		}
+		taskYIELD();
 	}
 }
 
 void writingI2C_task(void *pvParameters)
 {
 
-	PRINTF("Hola escribir i2c");
+	taskYIELD();
 
 }
 
 void setHour_task(void *pvParameters){
-
+	taskYIELD();
 }
 
 void setDate_task(void *pvParameters){
-
+	taskYIELD();
 }
 
 void hourFormat_task(void *pvParameters){
-
+	taskYIELD();
 }
 
 void readHour_task(void *pvParameters){
-
+	taskYIELD();
 }
 
 void readDate_task(void *pvParameters){
-
+	taskYIELD();
 }
 
 void chat_task(void *pvParameters)
 {
-	uint8_t testBufferOne[60] = {0};
-	uint8_t testBufferFour[60] = {0};
-	uint8_t TerminalOneString[] = "Terminal 1:\r\n";
-	uint8_t TerminalTwoString[] = "Terminal 2:\r\n";
-	uint8_t TerminalOneEndingString[] = "Terminal 1 se ha desconectado";
-	uint8_t TerminalTwoEndingString[] = "Terminal 2 se ha desconectado";
-	uint8_t bufferOneCounter = 0;
-	uint8_t bufferFourCounter = 0;
-
-	UART_WriteBlocking(DEMO_UART0, clearingCommand, sizeof(clearingCommand) / sizeof(clearingCommand[0]));
-	UART_WriteBlocking(DEMO_UART0, blueScreeCommand, sizeof(blueScreeCommand) / sizeof(blueScreeCommand[0]));
-	UART_WriteBlocking(DEMO_UART0, xandyPositioning, sizeof(xandyPositioning) / sizeof(xandyPositioning[0]));
-
+	static uint8_t received_data;
+	UART_Type *currentUart;
+	static uint8_t testBufferOne[60] = {0};
+	static uint8_t testBufferFour[60] = {0};
+	static uint8_t TerminalOneString[] = "Terminal 1:\r\n";
+	static uint8_t TerminalTwoString[] = "Terminal 2:\r\n";
+	static uint8_t TerminalOneEndingString[] = "Terminal 1 se ha desconectado";
+	static uint8_t TerminalTwoEndingString[] = "Terminal 2 se ha desconectado";
+	static uint8_t bufferOneCounter = 0;
+	static uint8_t bufferFourCounter = 0;
 	for(;;)
 	{
-		if(uartFlag == UART0FLAG)
+		if(MENU_OP8 == xEventGroupGetBits(Event_uartHandle0) && (MENU_OP8 == xEventGroupGetBits(Event_uartHandle3)))
 		{
-			if((ESCTERA != uart0Data)  /*|| (ESCBLUE != uart3Data)*/)
+			if(xSemaphoreTakeFromISR(NewDataUart0, pxHigherPriorityTaskWoken))
 			{
-				while ((kUART_TxDataRegEmptyFlag & UART_GetStatusFlags(DEMO_UART0)) && (rxIndexUart0 != txIndexUart0))
+				received_data = uart0Data;
+				currentUart = DEMO_UART0;
+				if(ENTERTERA != uart0Data)
 				{
 					UART_WriteByte(DEMO_UART0, uart0Data);
-					txIndexUart0++;
-					txIndexUart0 %= 16;
-					if(ENTERTERA !=  uart0Data)
-					{
-						testBufferOne[bufferOneCounter] = uart0Data;
-						bufferOneCounter++;
-					}
-					else if(ENTERTERA == uart0Data)
-					{
-						bufferOneCounter = 0;
-						UART_WriteBlocking(DEMO_UART0, NewLineString, sizeof(NewLineString) / sizeof(NewLineString[0]));
-						UART_WriteBlocking(DEMO_UART0, TerminalOneString, sizeof(TerminalOneString) / sizeof(TerminalOneString[0]));
-						UART_WriteBlocking(DEMO_UART0, testBufferOne, sizeof(testBufferOne) / sizeof(testBufferOne[0]));
-						UART_WriteBlocking(DEMO_UART0, NewLineString, sizeof(NewLineString) / sizeof(NewLineString[0]));
-						UART_WriteBlocking(DEMO_UART3, TerminalOneString, sizeof(TerminalOneString) / sizeof(TerminalOneString[0]));
-						UART_WriteBlocking(DEMO_UART3, testBufferOne, sizeof(testBufferOne) / sizeof(testBufferOne[0]));
-						UART_WriteBlocking(DEMO_UART3, NewLineString, sizeof(NewLineString) / sizeof(NewLineString[0]));
-					}
+					testBufferOne[bufferOneCounter] = uart0Data;
+					bufferOneCounter++;
+				}
+				else if(ENTERTERA == uart0Data)
+				{
+					bufferOneCounter = 0;
+					UART_WriteBlocking(DEMO_UART0, NewLineString, sizeof(NewLineString) / sizeof(NewLineString[0]));
+					UART_WriteBlocking(DEMO_UART0, TerminalOneString, sizeof(TerminalOneString) / sizeof(TerminalOneString[0]));
+					UART_WriteBlocking(DEMO_UART0, testBufferOne, sizeof(testBufferOne) / sizeof(testBufferOne[0]));
+					UART_WriteBlocking(DEMO_UART0, NewLineString, sizeof(NewLineString) / sizeof(NewLineString[0]));
+					UART_WriteBlocking(DEMO_UART3, TerminalOneString, sizeof(TerminalOneString) / sizeof(TerminalOneString[0]));
+					UART_WriteBlocking(DEMO_UART3, testBufferOne, sizeof(testBufferOne) / sizeof(testBufferOne[0]));
+					UART_WriteBlocking(DEMO_UART3, NewLineString, sizeof(NewLineString) / sizeof(NewLineString[0]));
 				}
 			}
-		}
-		else if(uartFlag == UART3FLAG)
-		{
-			if((ESCBLUE != uart3Data))
+			if(xSemaphoreTakeFromISR(NewDataUart3, pxHigherPriorityTaskWoken))
 			{
-				while ((kUART_TxDataRegEmptyFlag & UART_GetStatusFlags(DEMO_UART3)) && (rxIndexUart3 != txIndexUart3))
+				received_data = uart3Data;
+				currentUart = DEMO_UART3;
+				if(ENTERTERA != uart3Data)
 				{
 					UART_WriteByte(DEMO_UART3, uart3Data);
-					txIndexUart3++;
-					txIndexUart3 %= 16;
-
-					if(ENTERBLUE !=  uart3Data)
-					{
-						testBufferFour[bufferFourCounter] = uart3Data;
-						bufferFourCounter++;
-					}
-					else if(ENTERBLUE == uart3Data) //ENTERBLUE = [
-					{
-						bufferFourCounter = 0;
-						UART_WriteBlocking(DEMO_UART3, NewLineString, sizeof(NewLineString) / sizeof(NewLineString[0]));
-						UART_WriteBlocking(DEMO_UART3, TerminalTwoString, sizeof(TerminalTwoString) / sizeof(TerminalTwoString[0]));
-						UART_WriteBlocking(DEMO_UART3, testBufferFour, sizeof(testBufferFour) / sizeof(testBufferFour[0]));
-						UART_WriteBlocking(DEMO_UART3, NewLineString, sizeof(NewLineString) / sizeof(NewLineString[0]));
-						UART_WriteBlocking(DEMO_UART0, TerminalTwoString, sizeof(TerminalTwoString) / sizeof(TerminalTwoString[0]));
-						UART_WriteBlocking(DEMO_UART0, testBufferFour, sizeof(testBufferFour) / sizeof(testBufferFour[0]));
-						UART_WriteBlocking(DEMO_UART0, NewLineString, sizeof(NewLineString) / sizeof(NewLineString[0]));
-					}
+					testBufferFour[bufferFourCounter] = uart3Data;
+					bufferFourCounter++;
+				}
+				else if(ENTERTERA == uart3Data)
+				{
+					bufferFourCounter = 0;
+					UART_WriteBlocking(DEMO_UART3, NewLineString, sizeof(NewLineString) / sizeof(NewLineString[0]));
+					UART_WriteBlocking(DEMO_UART3, TerminalTwoString, sizeof(TerminalTwoString) / sizeof(TerminalTwoString[0]));
+					UART_WriteBlocking(DEMO_UART3, testBufferFour, sizeof(testBufferFour) / sizeof(testBufferFour[0]));
+					UART_WriteBlocking(DEMO_UART3, NewLineString, sizeof(NewLineString) / sizeof(NewLineString[0]));
+					UART_WriteBlocking(DEMO_UART0, TerminalTwoString, sizeof(TerminalTwoString) / sizeof(TerminalTwoString[0]));
+					UART_WriteBlocking(DEMO_UART0, testBufferFour, sizeof(testBufferFour) / sizeof(testBufferFour[0]));
+					UART_WriteBlocking(DEMO_UART0, NewLineString, sizeof(NewLineString) / sizeof(NewLineString[0]));
 				}
 			}
 		}
-		if((ESCTERA == uart0Data)) //ESCBLUE = ]
-		{
-			UART_WriteBlocking(DEMO_UART0, TerminalOneEndingString, sizeof(TerminalOneEndingString) / sizeof(TerminalOneEndingString[0]));
-			UART_WriteBlocking(DEMO_UART0, NewLineString, sizeof(NewLineString) / sizeof(NewLineString[0]));
-			UART_WriteBlocking(DEMO_UART3, TerminalOneEndingString, sizeof(TerminalOneEndingString) / sizeof(TerminalOneEndingString[0]));
-			UART_WriteBlocking(DEMO_UART3, NewLineString, sizeof(NewLineString) / sizeof(NewLineString[0]));
-			delay(450000);
-			vTaskDelete(chatHandle);
-		}
-		else if((ESCBLUE == uart3Data))
-		{
-			UART_WriteBlocking(DEMO_UART3, TerminalTwoEndingString, sizeof(TerminalTwoEndingString) / sizeof(TerminalTwoEndingString[0]));
-			UART_WriteBlocking(DEMO_UART3, NewLineString, sizeof(NewLineString) / sizeof(NewLineString[0]));
-			UART_WriteBlocking(DEMO_UART0, TerminalTwoEndingString, sizeof(TerminalTwoEndingString) / sizeof(TerminalTwoEndingString[0]));
-			UART_WriteBlocking(DEMO_UART0, NewLineString, sizeof(NewLineString) / sizeof(NewLineString[0]));
-			delay(450000);
-			vTaskDelete(chatHandle);
-		}
-		taskYIELD();
+		//vTaskDelay(5);
+		//taskYIELD();
 	}
 }
 
 void eco_task(void *pvParameters)
 {
-	if(uartFlag == UART0FLAG)
-	{
-		UART_WriteBlocking(DEMO_UART0, clearingCommand, sizeof(clearingCommand) / sizeof(clearingCommand[0]));
-		UART_WriteBlocking(DEMO_UART0, blueScreeCommand, sizeof(blueScreeCommand) / sizeof(blueScreeCommand[0]));
-		UART_WriteBlocking(DEMO_UART0, xandyPositioning, sizeof(xandyPositioning) / sizeof(xandyPositioning[0]));
-	}
+	static uint8_t key_pressed = FALSE;
+	static uint8_t received_data;
+	UART_Type *currentUart;
 	LCDNokia_clear();
 	for(;;)
 	{
-		if(uartFlag == UART0FLAG)
+		if (MENU_OP9 == xEventGroupGetBits(Event_uartHandle0) || MENU_OP9 == xEventGroupGetBits(Event_uartHandle3))
 		{
-			if(ESCTERA != uart0Data)
+			if(xSemaphoreTakeFromISR(NewDataUart0, pxHigherPriorityTaskWoken))
 			{
-				while ((kUART_TxDataRegEmptyFlag & UART_GetStatusFlags(DEMO_UART0)) && (rxIndexUart0 != txIndexUart0))
+				received_data = uart0Data;
+				currentUart = DEMO_UART0;
+				if(ESCTERA != received_data)
 				{
-					UART_WriteByte(DEMO_UART0, uart0Data);
-					txIndexUart0++;
-					txIndexUart0 %= 16;
-
-					LCDNokia_sendChar(uart0Data);
+					UART_WriteByte(currentUart,received_data);
+					LCDNokia_sendChar(received_data);
 				}
 			}
-			else if(ESCTERA == uart0Data)
+			else if(xSemaphoreTakeFromISR(NewDataUart3, pxHigherPriorityTaskWoken))
 			{
-				LCDNokia_clear();
-				vTaskDelete(ecoHandle);
-			}
-		}
-		else if(uartFlag == UART3FLAG)
-		{
-			if(ESCBLUE != uart3Data)
-			{
-				while ((kUART_TxDataRegEmptyFlag & UART_GetStatusFlags(DEMO_UART3)) && (rxIndexUart3 != txIndexUart3))
+				received_data = uart3Data;
+				currentUart = DEMO_UART3;
+				if(ESCTERA != received_data)
 				{
-					UART_WriteByte(DEMO_UART3, uart3Data);
-					txIndexUart3++;
-					txIndexUart3 %= 16;
-					LCDNokia_sendChar(uart3Data);
+					UART_WriteByte(currentUart,received_data);
+					LCDNokia_sendChar(received_data);
 				}
 			}
-			else if(ESCBLUE == uart3Data)
-			{
-				LCDNokia_clear();
-				vTaskDelete(ecoHandle);
-			}
 		}
+		vTaskDelay(1);
+		taskYIELD();
 	}
 }
 
 
+static void printingReadMemMenu(UART_Type *base)
+{
+	xTaskCreate(readingI2C_task, "ReadingI2C_Task", configMINIMAL_STACK_SIZE, NULL, 2, NULL);//OPTION 1
+	if(UART0 ==  base)
+	{
+		UART_WriteBlocking(DEMO_UART0, clearingCommand, sizeof(clearingCommand) / sizeof(clearingCommand[0]));
+		UART_WriteBlocking(DEMO_UART0, blueScreeCommand, sizeof(blueScreeCommand) / sizeof(blueScreeCommand[0]));
+		UART_WriteBlocking(DEMO_UART0, xandyPositioning, sizeof(xandyPositioning) / sizeof(xandyPositioning[0]));
+		UART_WriteBlocking(DEMO_UART0, memoryDirectionString, sizeof(memoryDirectionString) / sizeof(memoryDirectionString[0]));
+		UART_WriteBlocking(DEMO_UART0, adjust2, sizeof(adjust2) / sizeof(adjust2[0]));
+		UART_WriteBlocking(DEMO_UART0, lenghtToReadString, sizeof(lenghtToReadString) / sizeof(lenghtToReadString[0]));
+		UART_WriteBlocking(DEMO_UART0, adjust3, sizeof(adjust3) / sizeof(adjust3[0]));
+	}
+	else if(UART3 ==base)
+	{
+		UART_WriteBlocking(DEMO_UART3, clearingCommand, sizeof(clearingCommand) / sizeof(clearingCommand[0]));
+		UART_WriteBlocking(DEMO_UART3, blueScreeCommand, sizeof(blueScreeCommand) / sizeof(blueScreeCommand[0]));
+		UART_WriteBlocking(DEMO_UART3, xandyPositioning, sizeof(xandyPositioning) / sizeof(xandyPositioning[0]));
+		UART_WriteBlocking(DEMO_UART3, memoryDirectionString, sizeof(memoryDirectionString) / sizeof(memoryDirectionString[0]));
+		UART_WriteBlocking(DEMO_UART3, adjust2, sizeof(adjust2) / sizeof(adjust2[0]));
+		UART_WriteBlocking(DEMO_UART3, lenghtToReadString, sizeof(lenghtToReadString) / sizeof(lenghtToReadString[0]));
+		UART_WriteBlocking(DEMO_UART3, adjust3, sizeof(adjust3) / sizeof(adjust3[0]));
+	}
+}
 
+static void printingWriteMemMenu(UART_Type *base)
+{
+	xTaskCreate(writingI2C_task, "WritingI2C_Task", configMINIMAL_STACK_SIZE, NULL, 2, NULL);//OPTION 2
+	if(UART0 == base)
+	{
+		UART_WriteBlocking(DEMO_UART0, clearingCommand, sizeof(clearingCommand) / sizeof(clearingCommand[0]));
+		UART_WriteBlocking(DEMO_UART0, blueScreeCommand, sizeof(blueScreeCommand) / sizeof(blueScreeCommand[0]));
+		UART_WriteBlocking(DEMO_UART0, xandyPositioning, sizeof(xandyPositioning) / sizeof(xandyPositioning[0]));
+		UART_WriteBlocking(DEMO_UART0, memoryWriteDirectionString, sizeof(memoryWriteDirectionString) / sizeof(memoryWriteDirectionString[0]));
+		UART_WriteBlocking(DEMO_UART0, adjust2, sizeof(adjust2) / sizeof(adjust2[0]));
+		UART_WriteBlocking(DEMO_UART0, savedTextString, sizeof(savedTextString) / sizeof(savedTextString[0]));
+		UART_WriteBlocking(DEMO_UART0, adjust4, sizeof(adjust3) / sizeof(adjust3[0]));
+		UART_WriteBlocking(DEMO_UART0, adjust3, sizeof(adjust3) / sizeof(adjust3[0]));
+	}
+	else if(UART3 == base)
+	{
+		UART_WriteBlocking(DEMO_UART3, clearingCommand, sizeof(clearingCommand) / sizeof(clearingCommand[0]));
+		UART_WriteBlocking(DEMO_UART3, blueScreeCommand, sizeof(blueScreeCommand) / sizeof(blueScreeCommand[0]));
+		UART_WriteBlocking(DEMO_UART3, xandyPositioning, sizeof(xandyPositioning) / sizeof(xandyPositioning[0]));
+		UART_WriteBlocking(DEMO_UART3, memoryWriteDirectionString, sizeof(memoryWriteDirectionString) / sizeof(memoryWriteDirectionString[0]));
+		UART_WriteBlocking(DEMO_UART3, adjust2, sizeof(adjust2) / sizeof(adjust2[0]));
+		UART_WriteBlocking(DEMO_UART3, savedTextString, sizeof(savedTextString) / sizeof(savedTextString[0]));
+		UART_WriteBlocking(DEMO_UART3, adjust4, sizeof(adjust3) / sizeof(adjust3[0]));
+		UART_WriteBlocking(DEMO_UART3, adjust3, sizeof(adjust3) / sizeof(adjust3[0]));
+	}
+}
+
+static void printingSetHourMenu(UART_Type *base)
+{
+	xTaskCreate(setHour_task, "SetHour_Task", configMINIMAL_STACK_SIZE, NULL, 2, NULL);//OPTION 3
+	if(UART0 == base)
+	{
+		UART_WriteBlocking(DEMO_UART0, clearingCommand, sizeof(clearingCommand) / sizeof(clearingCommand[0]));
+		UART_WriteBlocking(DEMO_UART0, blueScreeCommand, sizeof(blueScreeCommand) / sizeof(blueScreeCommand[0]));
+		UART_WriteBlocking(DEMO_UART0, xandyPositioning, sizeof(xandyPositioning) / sizeof(xandyPositioning[0]));
+		UART_WriteBlocking(DEMO_UART0, setNewHourString, sizeof(setNewHourString) / sizeof(setNewHourString[0]));
+	}
+	else if(UART3 == base)
+	{
+		UART_WriteBlocking(DEMO_UART3, clearingCommand, sizeof(clearingCommand) / sizeof(clearingCommand[0]));
+		UART_WriteBlocking(DEMO_UART3, blueScreeCommand, sizeof(blueScreeCommand) / sizeof(blueScreeCommand[0]));
+		UART_WriteBlocking(DEMO_UART3, xandyPositioning, sizeof(xandyPositioning) / sizeof(xandyPositioning[0]));
+		UART_WriteBlocking(DEMO_UART3, setNewHourString, sizeof(setNewHourString) / sizeof(setNewHourString[0]));
+	}
+}
+
+static void printingSetDateMenu(UART_Type *base)
+{
+	xTaskCreate(setDate_task, "SetDate_Task", configMINIMAL_STACK_SIZE, NULL, 2, NULL);//OPTION 4
+	if(UART0 == base)
+	{
+		UART_WriteBlocking(DEMO_UART0, clearingCommand, sizeof(clearingCommand) / sizeof(clearingCommand[0]));
+		UART_WriteBlocking(DEMO_UART0, blueScreeCommand, sizeof(blueScreeCommand) / sizeof(blueScreeCommand[0]));
+		UART_WriteBlocking(DEMO_UART0, xandyPositioning, sizeof(xandyPositioning) / sizeof(xandyPositioning[0]));
+		UART_WriteBlocking(DEMO_UART0, setNewDateString, sizeof(setNewDateString) / sizeof(setNewDateString[0]));
+	}
+	else if(UART3 == base)
+	{
+		UART_WriteBlocking(DEMO_UART3, clearingCommand, sizeof(clearingCommand) / sizeof(clearingCommand[0]));
+		UART_WriteBlocking(DEMO_UART3, blueScreeCommand, sizeof(blueScreeCommand) / sizeof(blueScreeCommand[0]));
+		UART_WriteBlocking(DEMO_UART3, xandyPositioning, sizeof(xandyPositioning) / sizeof(xandyPositioning[0]));
+		UART_WriteBlocking(DEMO_UART3, setNewDateString, sizeof(setNewDateString) / sizeof(setNewDateString[0]));
+	}
+}
+
+static void printingSetFormatMenu(UART_Type *base)
+{
+	xTaskCreate(hourFormat_task, "HourFormat", configMINIMAL_STACK_SIZE, NULL,2, NULL);//OPTION 5
+	if(UART0 == base)
+	{
+		UART_WriteBlocking(DEMO_UART0, clearingCommand, sizeof(clearingCommand) / sizeof(clearingCommand[0]));
+		UART_WriteBlocking(DEMO_UART0, blueScreeCommand, sizeof(blueScreeCommand) / sizeof(blueScreeCommand[0]));
+		UART_WriteBlocking(DEMO_UART0, xandyPositioning, sizeof(xandyPositioning) / sizeof(xandyPositioning[0]));
+		UART_WriteBlocking(DEMO_UART0, setNewFormatString, sizeof(setNewFormatString) / sizeof(setNewFormatString[0]));
+	}
+	else if(UART3 == base)
+	{
+		UART_WriteBlocking(DEMO_UART3, clearingCommand, sizeof(clearingCommand) / sizeof(clearingCommand[0]));
+		UART_WriteBlocking(DEMO_UART3, blueScreeCommand, sizeof(blueScreeCommand) / sizeof(blueScreeCommand[0]));
+		UART_WriteBlocking(DEMO_UART3, xandyPositioning, sizeof(xandyPositioning) / sizeof(xandyPositioning[0]));
+		UART_WriteBlocking(DEMO_UART3, setNewFormatString, sizeof(setNewFormatString) / sizeof(setNewFormatString[0]));
+	}
+}
+
+static void printingReadHourMenu(UART_Type *base)
+{
+	xTaskCreate(readHour_task, "ReadHour_Task", configMINIMAL_STACK_SIZE, NULL, 2, NULL); //OPTION 6
+	if(UART0 == base)
+	{
+		UART_WriteBlocking(DEMO_UART0, clearingCommand, sizeof(clearingCommand) / sizeof(clearingCommand[0]));
+		UART_WriteBlocking(DEMO_UART0, blueScreeCommand, sizeof(blueScreeCommand) / sizeof(blueScreeCommand[0]));
+		UART_WriteBlocking(DEMO_UART0, xandyPositioning, sizeof(xandyPositioning) / sizeof(xandyPositioning[0]));
+		UART_WriteBlocking(DEMO_UART0, readActualHourString, sizeof(readActualHourString) / sizeof(readActualHourString[0]));
+		UART_WriteBlocking(DEMO_UART0, adjust2, sizeof(adjust2) / sizeof(adjust2[0]));
+	}
+	else if(UART3 == base)
+	{
+		UART_WriteBlocking(DEMO_UART3, clearingCommand, sizeof(clearingCommand) / sizeof(clearingCommand[0]));
+		UART_WriteBlocking(DEMO_UART3, blueScreeCommand, sizeof(blueScreeCommand) / sizeof(blueScreeCommand[0]));
+		UART_WriteBlocking(DEMO_UART3, xandyPositioning, sizeof(xandyPositioning) / sizeof(xandyPositioning[0]));
+		UART_WriteBlocking(DEMO_UART3, readActualHourString, sizeof(readActualHourString) / sizeof(readActualHourString[0]));
+		UART_WriteBlocking(DEMO_UART0, adjust2, sizeof(adjust2) / sizeof(adjust2[0]));
+	}
+}
+
+static void printingReadDateMenu(UART_Type *base)
+{
+	xTaskCreate(readDate_task, "ReadDate_Task", configMINIMAL_STACK_SIZE, NULL, 2, NULL);//OPTION 7
+	if(UART0 == base)
+	{
+		UART_WriteBlocking(DEMO_UART0, clearingCommand, sizeof(clearingCommand) / sizeof(clearingCommand[0]));
+		UART_WriteBlocking(DEMO_UART0, blueScreeCommand, sizeof(blueScreeCommand) / sizeof(blueScreeCommand[0]));
+		UART_WriteBlocking(DEMO_UART0, xandyPositioning, sizeof(xandyPositioning) / sizeof(xandyPositioning[0]));
+		UART_WriteBlocking(DEMO_UART0, readActualDateString, sizeof(readActualDateString) / sizeof(readActualDateString[0]));
+		UART_WriteBlocking(DEMO_UART0, adjust2, sizeof(adjust2) / sizeof(adjust2[0]));
+	}
+	else if(UART3 == base)
+	{
+		UART_WriteBlocking(DEMO_UART3, clearingCommand, sizeof(clearingCommand) / sizeof(clearingCommand[0]));
+		UART_WriteBlocking(DEMO_UART3, blueScreeCommand, sizeof(blueScreeCommand) / sizeof(blueScreeCommand[0]));
+		UART_WriteBlocking(DEMO_UART3, xandyPositioning, sizeof(xandyPositioning) / sizeof(xandyPositioning[0]));
+		UART_WriteBlocking(DEMO_UART3, readActualDateString, sizeof(readActualDateString) / sizeof(readActualDateString[0]));
+		UART_WriteBlocking(DEMO_UART0, adjust2, sizeof(adjust2) / sizeof(adjust2[0]));
+	}
+}
+
+static void printingChatMenu(UART_Type *base)
+{
+	xTaskCreate(chat_task, "Chat_Task", configMINIMAL_STACK_SIZE, NULL, 2, NULL);//OPTION 8
+	if(UART0 == base)
+	{
+		UART_WriteBlocking(DEMO_UART0, clearingCommand, sizeof(clearingCommand) / sizeof(clearingCommand[0]));
+		UART_WriteBlocking(DEMO_UART0, blueScreeCommand, sizeof(blueScreeCommand) / sizeof(blueScreeCommand[0]));
+		UART_WriteBlocking(DEMO_UART0, xandyPositioning, sizeof(xandyPositioning) / sizeof(xandyPositioning[0]));
+		UART_WriteBlocking(DEMO_UART0, showingChatString, sizeof(showingChatString) / sizeof(showingChatString[0]));
+	}
+	else if(UART3 == base)
+	{
+		UART_WriteBlocking(DEMO_UART3, clearingCommand, sizeof(clearingCommand) / sizeof(clearingCommand[0]));
+		UART_WriteBlocking(DEMO_UART3, blueScreeCommand, sizeof(blueScreeCommand) / sizeof(blueScreeCommand[0]));
+		UART_WriteBlocking(DEMO_UART3, xandyPositioning, sizeof(xandyPositioning) / sizeof(xandyPositioning[0]));
+		UART_WriteBlocking(DEMO_UART3, showingChatString, sizeof(showingChatString) / sizeof(showingChatString[0]));
+	}
+}
+
+static void printingEcoMenu(UART_Type *base)
+{
+	xTaskCreate(eco_task, "Eco_Task", configMINIMAL_STACK_SIZE, NULL, 2, NULL);// OPTION 9
+	if(UART0 == base)
+	{
+		UART_WriteBlocking(DEMO_UART0, clearingCommand, sizeof(clearingCommand) / sizeof(clearingCommand[0]));
+		UART_WriteBlocking(DEMO_UART0, blueScreeCommand, sizeof(blueScreeCommand) / sizeof(blueScreeCommand[0]));
+		UART_WriteBlocking(DEMO_UART0, xandyPositioning, sizeof(xandyPositioning) / sizeof(xandyPositioning[0]));
+		UART_WriteBlocking(DEMO_UART0, ecoLcdString, sizeof(ecoLcdString) / sizeof(ecoLcdString[0]));
+		UART_WriteBlocking(DEMO_UART0, adjust2, sizeof(adjust2) / sizeof(adjust2[0]));
+	}
+	else if(UART3 == base)
+	{
+		UART_WriteBlocking(DEMO_UART3, clearingCommand, sizeof(clearingCommand) / sizeof(clearingCommand[0]));
+		UART_WriteBlocking(DEMO_UART3, blueScreeCommand, sizeof(blueScreeCommand) / sizeof(blueScreeCommand[0]));
+		UART_WriteBlocking(DEMO_UART3, xandyPositioning, sizeof(xandyPositioning) / sizeof(xandyPositioning[0]));
+		UART_WriteBlocking(DEMO_UART3, ecoLcdString, sizeof(ecoLcdString) / sizeof(ecoLcdString[0]));
+		UART_WriteBlocking(DEMO_UART0, adjust2, sizeof(adjust2) / sizeof(adjust2[0]));
+	}
+}

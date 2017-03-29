@@ -17,7 +17,6 @@
 #include "LCDNokia5110.h"
 
 #define ESCTERA 0x1B
-#define ESCBLUE 0x5D
 
 #define UART0FLAG 1
 #define UART3FLAG 2
@@ -32,10 +31,23 @@
 #define OPTION_8 0x38
 #define OPTION_9 0x39
 
+
+/**Events for menu options*/
+#define MENU_OP1 (1 << 0)
+#define MENU_OP2 (1 << 1)
+#define MENU_OP3 (1 << 2)
+#define MENU_OP4 (1 << 3)
+#define MENU_OP5 (1 << 4)
+#define MENU_OP6 (1 << 5)
+#define MENU_OP7 (1 << 6)
+#define MENU_OP8 (1 << 7)
+#define MENU_OP9 (1 << 8) //SPI
+
 #define ENTERTERA 0xD
 #define ENTERBLUE 0x5B
-#define TERMINALONE 1
-#define TERMINALTWO 2
+#define ESCTERA 0x1B
+#define ESCBLUE 0x5D
+
 
 void mainMenu0_task(void *pvParameters);
 void mainMenu3_task(void *pvParameters);
@@ -55,7 +67,15 @@ void eco_task(void *pvParameters);
 
 
 
-
+static void printingReadMemMenu(UART_Type *base);
+static void printingWriteMemMenu(UART_Type *base);
+static void printingSetHourMenu(UART_Type *base);
+static void printingSetDateMenu(UART_Type *base);
+static void printingSetFormatMenu(UART_Type *base);
+static void printingReadHourMenu(UART_Type *base);
+static void printingReadDateMenu(UART_Type *base);
+static void printingChatMenu(UART_Type *base);
+static void printingEcoMenu(UART_Type *base);
 
 
 

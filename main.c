@@ -161,13 +161,23 @@ int main(void) {
 
 	uart_init();
 
-
+	 printingMenu(DEMO_UART0);
+	 printingMenu(DEMO_UART3);
 
 	/* Add your code here */
 
 	/* Create RTOS task */
-	xTaskCreate(mainMenu0_task, "MainMenu0_Task", configMINIMAL_STACK_SIZE, NULL,1, NULL);
-	xTaskCreate(mainMenu3_task, "MainMenu0_Task", configMINIMAL_STACK_SIZE, NULL,1, NULL);
+	xTaskCreate(mainMenu0_task, "MainMenu0_Task", configMINIMAL_STACK_SIZE, NULL,5, NULL);
+	xTaskCreate(mainMenu3_task, "MainMenu0_Task", configMINIMAL_STACK_SIZE, NULL,5, NULL);
+	//xTaskCreate(readingI2C_task, "ReadingI2C_Task", configMINIMAL_STACK_SIZE, NULL, 2, NULL);//OPTION 1
+	//xTaskCreate(writingI2C_task, "WritingI2C_Task", configMINIMAL_STACK_SIZE, NULL, 2, NULL);//OPTION 2
+	//xTaskCreate(setHour_task, "SetHour_Task", configMINIMAL_STACK_SIZE, NULL, 2, NULL);//OPTION 3
+	//xTaskCreate(setDate_task, "SetDate_Task", configMINIMAL_STACK_SIZE, NULL, 2, NULL);//OPTION 4
+	//xTaskCreate(hourFormat_task, "HourFormat", configMINIMAL_STACK_SIZE, NULL,2, NULL);//OPTION 5
+	//xTaskCreate(readHour_task, "ReadHour_Task", configMINIMAL_STACK_SIZE, NULL, 2, NULL); //OPTION 6
+	//xTaskCreate(readDate_task, "ReadDate_Task", configMINIMAL_STACK_SIZE, NULL, 2, NULL);//OPTION 7
+	//xTaskCreate(chat_task, "Chat_Task", configMINIMAL_STACK_SIZE, NULL, 2, NULL);//OPTION 8
+	//xTaskCreate(eco_task, "Eco_Task", configMINIMAL_STACK_SIZE, NULL, 2, NULL);// OPTION 9
 
 	vTaskStartScheduler();
 

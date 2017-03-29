@@ -17,7 +17,7 @@
  * Definitions
  ******************************************************************************/
 #define UART_BAUDRATE0 115200U
-#define UART_BAUDRATE3 9600U
+#define UART_BAUDRATE3 115200U
 #define ECHO_BUFFER_LENGTH 1
 #define DEMO_UART0 UART0
 #define DEMO_UART3 UART3
