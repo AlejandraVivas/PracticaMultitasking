@@ -35,8 +35,8 @@
 //void uartInit_task(void *parameter);
 void UART_UserCallback(UART_Type *base, uart_handle_t *handle, status_t status, void *userData);
 
-void uart0_init(void);
-void uart3_init(void);
+void uart_init(void);
+//void uart3_init(void);
 
 
 #endif /* SOURCE_UART_H_ */

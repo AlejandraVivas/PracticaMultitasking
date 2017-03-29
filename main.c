@@ -39,7 +39,8 @@
 #include "UART.h"
 #include "GlobalFunctions.h"
 #include "SerialMenu.h"
-#include "User.h"
+#include "SPI.h"
+#include "LCDNokia5110.h"
 
 /* FreeRTOS kernel includes. */
 #include "FreeRTOS.h"
@@ -111,6 +112,7 @@ int main(void) {
 	BOARD_InitDebugConsole();
 	NVIC_SetPriority(DEMO_UART0_RX_TX_IRQn, 5);
 	NVIC_SetPriority(DEMO_UART3_RX_TX_IRQn, 5);
+	NVIC_SetPriority(SPI0_IRQn, 5);
 	port_pin_config_t config =
 	{
 			kPORT_PullDisable,
@@ -122,11 +124,11 @@ int main(void) {
 			kPORT_UnlockRegister
 	};
 
+
 	CLOCK_EnableClock(kCLOCK_PortA);
 	CLOCK_EnableClock(kCLOCK_PortB);
 	CLOCK_EnableClock(kCLOCK_PortC);
-	CLOCK_EnableClock(kCLOCK_PortE);
-	CLOCK_EnableClock(kCLOCK_PortE);
+	CLOCK_EnableClock(kCLOCK_PortE);;
 
  	PORT_SetPinConfig(PORTC, BIT5, &config);
 	PORT_SetPinConfig(PORTC, BIT7, &config);
@@ -145,17 +147,27 @@ int main(void) {
 
 	/* Enable the interrupt. */
 
-	NVIC_SetPriority( PORTC_IRQn, 1);
+	NVIC_SetPriority( PORTC_IRQn, 2);
 	NVIC_EnableIRQ( PORTC_IRQn);
 
-	uart0_init();
-	uart3_init();
+
+	spi_init();
+
+
+	LCDNokia_init();
+	LCDNokia_clear();
+
+	createSemaphoreMutex();
+
+	uart_init();
+
 
 
 	/* Add your code here */
 
 	/* Create RTOS task */
-	xTaskCreate(mainMenu_task, "MainMenu_Task", 90, NULL,1, NULL);
+	xTaskCreate(mainMenu0_task, "MainMenu0_Task", configMINIMAL_STACK_SIZE, NULL,1, NULL);
+	xTaskCreate(mainMenu3_task, "MainMenu0_Task", configMINIMAL_STACK_SIZE, NULL,1, NULL);
 
 	vTaskStartScheduler();
 

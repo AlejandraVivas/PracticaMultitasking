@@ -71,7 +71,7 @@ uint8_t spi_init(void)
     masterConfig.whichCtar = kDSPI_Ctar1;
     masterConfig.ctarConfig.baudRate = TRANSFER_BAUDRATE;
     masterConfig.ctarConfig.bitsPerFrame = 8;
-    masterConfig.ctarConfig.cpol = kDSPI_ClockPolarityActiveLow;
+    masterConfig.ctarConfig.cpol = kDSPI_ClockPolarityActiveHigh;
     masterConfig.ctarConfig.cpha = kDSPI_ClockPhaseFirstEdge;
     masterConfig.ctarConfig.direction = kDSPI_MsbFirst;
     masterConfig.ctarConfig.pcsToSckDelayInNanoSec = 1000000000U / TRANSFER_BAUDRATE;
@@ -90,36 +90,19 @@ uint8_t spi_init(void)
     return 0;
 }
 
-void spi_task(void *pvParameters)
-{
-    PRINTF("DSPI interrupt example start.\r\n");
+void spiSendByte(uint8_t data){
+	uint8_t masterTxData[1];
+	uint8_t masterRxData[1] ;
+	dspi_transfer_t masterXfer;
 
-    uint32_t i;
-    dspi_transfer_t masterXfer;
+	masterTxData[0] = data;
+	masterRxData[0] = 0;
+	masterXfer.txData = masterTxData;
+	masterXfer.rxData = masterRxData;
+	masterXfer.dataSize = 1;
+	masterXfer.configFlags = kDSPI_MasterCtar1 | kDSPI_MasterPcs0 | kDSPI_MasterPcsContinuous;
 
-    /* Set up the transfer data */
-    for (i = 0U; i < 2; i++)
-    {
-        masterTxData[i] = 0x0F;
-        masterRxData[i] = 0U;
-    }
-
-    isTransferCompleted = false;
-
-    /* Set up master transfer */
     DSPI_MasterTransferCreateHandle(SPI0, &g_m_handle, DSPI_MasterUserCallback, NULL);
-
-    /*Start master transfer*/
-    masterXfer.txData = masterTxData;
-    masterXfer.rxData = masterRxData;
-    masterXfer.dataSize = 2;
-    masterXfer.configFlags = kDSPI_MasterCtar0 | kDSPI_MasterPcs0 | kDSPI_MasterPcsContinuous;
-
-    DSPI_MasterTransferNonBlocking(SPI0, &g_m_handle, &masterXfer);
-
-    /* Wait to transfer all data. */
-    while (!isTransferCompleted)
-    {
-    }
+	DSPI_MasterTransferNonBlocking(SPI0, &g_m_handle, &masterXfer);
 
 }

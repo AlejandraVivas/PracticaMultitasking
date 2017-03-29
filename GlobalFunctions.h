@@ -11,7 +11,7 @@
 #include "fsl_gpio.h"
 #include "DataTypeDefinitions.h"
 
-void delay(uint16);
+void delay(uint32);
 
 
 
