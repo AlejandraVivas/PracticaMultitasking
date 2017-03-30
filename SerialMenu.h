@@ -15,6 +15,7 @@
 #include "UART.h"
 #include "GlobalFunctions.h"
 #include "LCDNokia5110.h"
+#include "memHandler.h"
 
 #define ESCTERA 0x1B
 
@@ -53,6 +54,7 @@ void mainMenu0_task(void *pvParameters);
 void mainMenu3_task(void *pvParameters);
 void printingMenu(UART_Type *base);
 void createSemaphoreMutex(void);
+uint8_t getMemoryAddress(uint8_t address_digit, uint8_t Address_counter);
 
 /*Uart 0*/
 void readingI2C_task(void *pvParameters);
