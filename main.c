@@ -114,6 +114,7 @@ int main(void) {
 	BOARD_InitPins();
 	BOARD_BootClockRUN();
 	BOARD_InitDebugConsole();
+	BOARD_I2C_ConfigurePins();
 	NVIC_SetPriority(DEMO_UART0_RX_TX_IRQn, 5);
 	NVIC_SetPriority(DEMO_UART3_RX_TX_IRQn, 5);
 	NVIC_SetPriority(SPI0_IRQn, 5);
@@ -164,7 +165,11 @@ int main(void) {
 
 	createSemaphoreMutex();
 
+	createQueues();
+
 	uart_init();
+
+
 
 	 printingMenu(DEMO_UART0);
 	 printingMenu(DEMO_UART3);
@@ -174,6 +179,7 @@ int main(void) {
 	/* Create RTOS task */
 	xTaskCreate(mainMenu0_task, "MainMenu0_Task", configMINIMAL_STACK_SIZE, NULL,4, NULL);
 	xTaskCreate(mainMenu3_task, "MainMenu0_Task", configMINIMAL_STACK_SIZE, NULL,4, NULL);
+	// xTaskCreate(getTime_task, "GetTime_Task", configMINIMAL_STACK_SIZE, NULL, 4, NULL);
 
 	vTaskStartScheduler();
 

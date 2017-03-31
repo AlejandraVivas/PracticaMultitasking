@@ -27,7 +27,7 @@ uint8_t pressKeyToContinueString[] = "Presione cualquier letra para continuar\r"
 
 
 /*Read Memory Menu*/
-uint8_t memoryDirectionString[] = "Direccion de Lectura:\r";
+uint8_t memoryDirectionString[] = "Direccion de Lectura: 0x\r";
 uint8_t lenghtToReadString[] = "Longitud en bytes:\r";
 uint8_t contentString[] = "Contenido:\r";
 
@@ -60,17 +60,19 @@ uint8_t TerminalOneEndingString[] = "Terminal se ha desconectado";
 /*Eco Menu*/
 uint8_t ecoLcdString[] = "Eco en pantalla LCD\r";
 
-
+uint8_t keyPressedNotvalidString[] = "Tecla no valida, presiona un numero entre 0 y 9";
 
 uint8_t adjust1[] = "\033[1;1H";
 uint8_t adjust2[] = "\033[2;1H";
-uint8_t adjust3[] = "\033[1;23H";
+uint8_t adjust3[] = "\033[1;25H";
 uint8_t adjust4[] = "\033[3;1H";
 uint8_t adjust5[] = "\033[2;23H";
 uint8_t adjust6[] = "\033[1;32H";
 uint8_t adjust7[] = "\033[2;33H";
 uint8_t adjust8[] = "\033[2;30H";
 uint8_t adjust9[] = "\033[1;33H";
+uint8_t adjut10[] = "\033[12;1H";
+uint8_t deleteLine[] = "\033[2K";
 
 uint8_t uart0Data;
 uint8_t uart3Data;
@@ -173,74 +175,85 @@ void mainMenu0_task(void *pvParameters)
 {
 	for(;;)
 	{
+		getTime_task();
 		if(!xEventGroupGetBits(Event_uartHandle0))
 		{
 			if(xSemaphoreTakeFromISR(NewDataUart0,pxHigherPriorityTaskWoken))
 			{
-				switch(uart0Data)
+				if(0x39 >= uart0Data && 0x31<= uart0Data)
 				{
-				case OPTION_1:
-					if(xSemaphoreTake(Mutex_ReadMem,1))
+					switch(uart0Data)
 					{
-						printingReadMemMenu(DEMO_UART0);
-						xEventGroupSetBits(Event_uartHandle0, MENU_OP1);
+					case OPTION_1:
+						if(xSemaphoreTake(Mutex_ReadMem,1))
+						{
+							printingReadMemMenu(DEMO_UART0);
+							xEventGroupSetBits(Event_uartHandle0, MENU_OP1);
+						}
+						break;
+					case OPTION_2:
+						if(xSemaphoreTake(Mutex_WriteMem,1))
+						{
+							printingWriteMemMenu(DEMO_UART0);
+							xEventGroupSetBits(Event_uartHandle0,MENU_OP2);
+						}
+						break;
+					case OPTION_3:
+						if(xSemaphoreTake(Mutex_SetHour,1))
+						{
+							printingSetHourMenu(DEMO_UART0);
+							xEventGroupSetBits(Event_uartHandle0, MENU_OP3);
+						}
+						break;
+					case OPTION_4:
+						if(xSemaphoreTake(Mutex_SetDate,1))
+						{
+							printingSetDateMenu(DEMO_UART0);
+							xEventGroupSetBits(Event_uartHandle0, MENU_OP4);
+						}
+						break;
+					case OPTION_5:
+						if(xSemaphoreTake(Mutex_SetFormat,1))
+						{
+							printingSetFormatMenu(DEMO_UART0);
+							xEventGroupSetBits(Event_uartHandle0, MENU_OP5);
+						}
+						break;
+					case OPTION_6:
+						if(xSemaphoreTake(Mutex_ReadHour,1))
+						{
+							printingReadHourMenu(DEMO_UART0);
+							xEventGroupSetBits(Event_uartHandle0, MENU_OP6);
+						}
+						break;
+					case OPTION_7:
+						if(xSemaphoreTake(Mutex_ReadDate,1))
+						{
+							printingReadDateMenu(DEMO_UART0);
+							xEventGroupSetBits(Event_uartHandle0,MENU_OP7);
+						}
+						break;
+					case OPTION_8:
+						printingChatMenu(DEMO_UART0);
+						xEventGroupSetBits(Event_uartHandle0,MENU_OP8);
+						break;
+					case OPTION_9:
+						if(xSemaphoreTake(Mutex_Eco,1))
+						{
+							printingEcoMenu(DEMO_UART0);
+							xEventGroupSetBits(Event_uartHandle0, MENU_OP9);
+						}
+						break;
+					default:
+						break;
 					}
-					break;
-				case OPTION_2:
-					if(xSemaphoreTake(Mutex_WriteMem,1))
-					{
-						printingWriteMemMenu(DEMO_UART0);
-						xEventGroupSetBits(Event_uartHandle0,MENU_OP2);
-					}
-					break;
-				case OPTION_3:
-					if(xSemaphoreTake(Mutex_SetHour,1))
-					{
-						printingSetHourMenu(DEMO_UART0);
-						xEventGroupSetBits(Event_uartHandle0, MENU_OP3);
-					}
-					break;
-				case OPTION_4:
-					if(xSemaphoreTake(Mutex_SetDate,1))
-					{
-						printingSetDateMenu(DEMO_UART0);
-						xEventGroupSetBits(Event_uartHandle0, MENU_OP4);
-					}
-					break;
-				case OPTION_5:
-					if(xSemaphoreTake(Mutex_SetFormat,1))
-					{
-						printingSetFormatMenu(DEMO_UART0);
-						xEventGroupSetBits(Event_uartHandle0, MENU_OP5);
-					}
-					break;
-				case OPTION_6:
-					if(xSemaphoreTake(Mutex_ReadHour,1))
-					{
-						printingReadHourMenu(DEMO_UART0);
-						xEventGroupSetBits(Event_uartHandle0, MENU_OP6);
-					}
-					break;
-				case OPTION_7:
-					if(xSemaphoreTake(Mutex_ReadDate,1))
-					{
-						printingReadDateMenu(DEMO_UART0);
-						xEventGroupSetBits(Event_uartHandle0,MENU_OP7);
-					}
-					break;
-				case OPTION_8:
-					printingChatMenu(DEMO_UART0);
-					xEventGroupSetBits(Event_uartHandle0,MENU_OP8);
-					break;
-				case OPTION_9:
-					if(xSemaphoreTake(Mutex_Eco,1))
-					{
-						printingEcoMenu(DEMO_UART0);
-						xEventGroupSetBits(Event_uartHandle0, MENU_OP9);
-					}
-					break;
-				default:
-					break;
+				}
+				else if(uart0Data != ESCTERA)
+				{
+					UART_WriteBlocking(DEMO_UART0, keyPressedNotvalidString, sizeof(keyPressedNotvalidString) / sizeof(keyPressedNotvalidString[0]));
+					delay(400000);
+					UART_WriteBlocking(DEMO_UART0, deleteLine, sizeof(deleteLine) / sizeof(deleteLine[0]));
+					UART_WriteBlocking(DEMO_UART0, adjut10, sizeof(adjut10) / sizeof(adjut10[0]));
 				}
 			}
 		}
@@ -309,75 +322,84 @@ void mainMenu3_task(void *pvParameters)
 {
 	for(;;)
 	{
-
 		if(!xEventGroupGetBits(Event_uartHandle3))
 		{
 			if(xSemaphoreTakeFromISR(NewDataUart3,pxHigherPriorityTaskWoken))
 			{
-				switch(uart3Data)
+				if(0x39 >= uart3Data && 0x31<= uart3Data)
 				{
-				case OPTION_1:
-					if(xSemaphoreTake(Mutex_ReadMem,1))
+					switch(uart3Data)
 					{
-						printingReadMemMenu(DEMO_UART3);
-						xEventGroupSetBits(Event_uartHandle3, MENU_OP1);
+					case OPTION_1:
+						if(xSemaphoreTake(Mutex_ReadMem,1))
+						{
+							printingReadMemMenu(DEMO_UART3);
+							xEventGroupSetBits(Event_uartHandle3, MENU_OP1);
+						}
+						break;
+					case OPTION_2:
+						if(xSemaphoreTake(Mutex_WriteMem,1))
+						{
+							printingWriteMemMenu(DEMO_UART3);
+							xEventGroupSetBits(Event_uartHandle3,MENU_OP2);
+						}
+						break;
+					case OPTION_3:
+						if(xSemaphoreTake(Mutex_SetHour,1))
+						{
+							printingSetHourMenu(DEMO_UART3);
+							xEventGroupSetBits(Event_uartHandle3, MENU_OP3);
+						}
+						break;
+					case OPTION_4:
+						if(xSemaphoreTake(Mutex_SetDate,1))
+						{
+							printingSetDateMenu(DEMO_UART3);
+							xEventGroupSetBits(Event_uartHandle3, MENU_OP4);
+						}
+						break;
+					case OPTION_5:
+						if(xSemaphoreTake(Mutex_SetFormat,1))
+						{
+							printingSetFormatMenu(DEMO_UART3);
+							xEventGroupSetBits(Event_uartHandle3, MENU_OP5);
+						}
+						break;
+					case OPTION_6:
+						if(xSemaphoreTake(Mutex_ReadHour,1))
+						{
+							printingReadHourMenu(DEMO_UART3);
+							xEventGroupSetBits(Event_uartHandle3, MENU_OP6);
+						}
+						break;
+					case OPTION_7:
+						if(xSemaphoreTake(Mutex_ReadDate,1))
+						{
+							printingReadDateMenu(DEMO_UART3);
+							xEventGroupSetBits(Event_uartHandle3,MENU_OP7);
+						}
+						break;
+					case OPTION_8:
+						printingChatMenu(DEMO_UART3);
+						xEventGroupSetBits(Event_uartHandle3,MENU_OP8);
+						break;
+					case OPTION_9:
+						if(xSemaphoreTake(Mutex_Eco,1))
+						{
+							printingEcoMenu(DEMO_UART3);
+							xEventGroupSetBits(Event_uartHandle3, MENU_OP9);
+						}
+						break;
+					default:
+						break;
 					}
-					break;
-				case OPTION_2:
-					if(xSemaphoreTake(Mutex_WriteMem,1))
-					{
-						printingWriteMemMenu(DEMO_UART3);
-						xEventGroupSetBits(Event_uartHandle3,MENU_OP2);
-					}
-					break;
-				case OPTION_3:
-					if(xSemaphoreTake(Mutex_SetHour,1))
-					{
-						printingSetHourMenu(DEMO_UART3);
-						xEventGroupSetBits(Event_uartHandle3, MENU_OP3);
-					}
-					break;
-				case OPTION_4:
-					if(xSemaphoreTake(Mutex_SetDate,1))
-					{
-						printingSetDateMenu(DEMO_UART3);
-						xEventGroupSetBits(Event_uartHandle3, MENU_OP4);
-					}
-					break;
-				case OPTION_5:
-					if(xSemaphoreTake(Mutex_SetFormat,1))
-					{
-						printingSetFormatMenu(DEMO_UART3);
-						xEventGroupSetBits(Event_uartHandle3, MENU_OP5);
-					}
-					break;
-				case OPTION_6:
-					if(xSemaphoreTake(Mutex_ReadHour,1))
-					{
-						printingReadHourMenu(DEMO_UART3);
-						xEventGroupSetBits(Event_uartHandle3, MENU_OP6);
-					}
-					break;
-				case OPTION_7:
-					if(xSemaphoreTake(Mutex_ReadDate,1))
-					{
-						printingReadDateMenu(DEMO_UART3);
-						xEventGroupSetBits(Event_uartHandle3,MENU_OP7);
-					}
-					break;
-				case OPTION_8:
-					printingChatMenu(DEMO_UART3);
-					xEventGroupSetBits(Event_uartHandle3,MENU_OP8);
-					break;
-				case OPTION_9:
-					if(xSemaphoreTake(Mutex_Eco,1))
-					{
-						printingEcoMenu(DEMO_UART3);
-						xEventGroupSetBits(Event_uartHandle3, MENU_OP9);
-					}
-					break;
-				default:
-					break;
+				}
+				else if(uart3Data != ESCTERA)
+				{
+					UART_WriteBlocking(DEMO_UART3, keyPressedNotvalidString, sizeof(keyPressedNotvalidString) / sizeof(keyPressedNotvalidString[0]));
+					delay(400000);
+					UART_WriteBlocking(DEMO_UART3, deleteLine, sizeof(deleteLine) / sizeof(deleteLine[0]));
+					UART_WriteBlocking(DEMO_UART3, adjut10, sizeof(adjut10) / sizeof(adjut10[0]));
 				}
 			}
 		}
@@ -489,12 +511,12 @@ void readingI2C_task(void *pvParameters)
 	static uint8 lengthCounter = 0;
 	static uint8 lengthToRead[3];
 	static uint8 midatoMemoria[4]; /**address that's going to be read*/
-	//static uint16 counterValue = OPTION;
 	static uint16 numberOfBytes; /**length of the string we're reading*/
 	static uint8 *readValue;
 	static uint8_t received_data;
 	UART_Type *currentUart;
-	static uint8_t key_pressed = FALSE;
+	static uint8_t key_pressedMemory = FALSE;
+	static uint8_t key_pressedLenght = FALSE;
 
 	for(;;)
 	{
@@ -504,26 +526,27 @@ void readingI2C_task(void *pvParameters)
 			{
 				received_data = uart0Data;
 				currentUart = DEMO_UART0;
+				UART_WriteByte(currentUart, received_data);
 				if(ESCTERA != received_data)
 				{
-					key_pressed = TRUE;
+					key_pressedMemory = TRUE;
 				}
 			}
 			else if(xSemaphoreTakeFromISR(NewDataUart3, pxHigherPriorityTaskWoken))
 			{
 				received_data = uart3Data;
 				currentUart = DEMO_UART3;
+				UART_WriteByte(currentUart, received_data);
 				if(ESCTERA != received_data)
 				{
-					key_pressed = TRUE;
+					key_pressedLenght = TRUE;
 				}
 			}
-			if(TRUE == key_pressed)
+			if(TRUE == key_pressedMemory)
 			{
-				key_pressed = FALSE;
+				key_pressedMemory = FALSE;
 				if(memoryCounter < 4)
 				{
-					UART_WriteByte(currentUart, received_data);
 					midatoMemoria[memoryCounter] = received_data;
 					memoryCounter++;
 				}
@@ -532,8 +555,21 @@ void readingI2C_task(void *pvParameters)
 			if(ENTERTERA == received_data)
 			{
 				memoryCounter = 0;
-				UART_WriteBlocking(DEMO_UART0, adjust3, sizeof(adjust3) / sizeof(adjust3[0]));
-
+				key_pressedMemory = TRUE;
+				UART_WriteBlocking(currentUart, adjust5, sizeof(adjust5) / sizeof(adjust5[0]));
+			}
+			if(TRUE == key_pressedLenght)
+			{
+				key_pressedLenght = FALSE;
+				if(memoryCounter<3)
+				{
+					lengthToRead[lengthCounter] = received_data;
+					lengthCounter++;
+				}
+			}
+			if(ENTERTERA == received_data)
+			{
+				lengthCounter = 0;
 			}
 		}
 		vTaskDelay(1);
