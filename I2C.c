@@ -11,6 +11,7 @@ i2c_master_handle_t i2c_handle;
 volatile bool completionFlag = false;
 volatile bool nakFlag = false;
 
+
 void i2c_master_callback(I2C_Type *base, i2c_master_handle_t *handle, status_t status, void *userData){
 	/* Signal transfer success when received success status. */
 	if (status == kStatus_Success)
@@ -107,36 +108,6 @@ bool I2C_RtcWrite(I2C_Type *base, uint8_t device_addr, uint8_t reg_addr, uint8_t
 }
 
 
-bool I2C_Read(I2C_Type *base, uint8_t device_addr, uint8_t reg_addr, uint8_t *rxBuff, uint32_t rxSize)
-{
-	i2c_master_transfer_t masterXfer;
-	memset(&masterXfer, 0, sizeof(masterXfer));
-	masterXfer.slaveAddress = device_addr;
-	masterXfer.direction = kI2C_Read;
-	masterXfer.subaddress = reg_addr;
-	masterXfer.subaddressSize = 1;
-	masterXfer.data = rxBuff;
-	masterXfer.dataSize = rxSize;
-	masterXfer.flags = kI2C_TransferDefaultFlag;
-
-	I2C_MasterTransferNonBlocking(I2C0, &i2c_handle, &masterXfer);
-	/*  wait for transfer completed. */
-	while((!nakFlag) && (!completionFlag))
-	{
-	}
-
-	nakFlag = false;
-
-	if (completionFlag == true)
-	{
-		completionFlag = false;
-		return true;
-	}
-	else
-	{
-		return false;
-	}
-}
 
 bool I2C_MemoryRead(I2C_Type *base, uint8_t device_addr, uint16_t reg_addr, uint8_t *rxBuff, uint32_t rxSize)
 {

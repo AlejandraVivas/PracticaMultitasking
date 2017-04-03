@@ -60,49 +60,11 @@
 #include "fsl_debug_console.h"
 #include "fsl_gpio.h"
 
-uint8_t buttonOneFlag = FALSE;
-uint8_t buttonTwoFlag = FALSE;
-uint8_t buttonThreeFlag = FALSE;
-uint8_t buttonFourFlag = FALSE;
-uint8_t buttonFiveFlag = FALSE;
-uint8_t buttonSixFlag = FALSE;
-
-uint32_t bitNumber = 0;
-
-
-
 
 /* Task priorities. */
-
+TaskHandle_t lcdHandle;
 
 //Todo lo coppiado y pegado en Buttons.c
-
-void PORTC_IRQHandler(void)
-{
-	bitNumber = GPIO_GetPinsInterruptFlags(GPIOC);
-	switch(bitNumber)
-	{
-	case BIT5:
-		GPIO_ClearPinsInterruptFlags(GPIOC, BIT5);
-		buttonOneFlag = TRUE;
-	case BIT7:
-		GPIO_ClearPinsInterruptFlags(GPIOC, BIT7);
-		buttonTwoFlag = TRUE;
-	case BIT0:
-		GPIO_ClearPinsInterruptFlags(GPIOC, BIT0);
-		buttonThreeFlag = TRUE;
-	case BIT9:
-		GPIO_ClearPinsInterruptFlags(GPIOC, BIT9);
-		buttonFourFlag = TRUE;
-	case BIT8:
-		GPIO_ClearPinsInterruptFlags(GPIOC, BIT8);
-		buttonFiveFlag = TRUE;
-	case BIT1:
-		GPIO_ClearPinsInterruptFlags(GPIOC, BIT1);
-		buttonSixFlag = TRUE;
-	}
-
-}
 
 
 /*!
@@ -139,8 +101,7 @@ int main(void) {
 	PORT_SetPinConfig(PORTC, BIT7, &config);
 	PORT_SetPinConfig(PORTC, BIT0, &config);
 	PORT_SetPinConfig(PORTC, BIT9, &config);
-	PORT_SetPinConfig(PORTC, BIT8, &config);
-	PORT_SetPinConfig(PORTC, BIT1, &config);
+
 
 	PORT_SetPinInterruptConfig(PORTC, BIT5, kPORT_InterruptFallingEdge);
 	PORT_SetPinInterruptConfig(PORTC, BIT7, kPORT_InterruptFallingEdge);
@@ -152,7 +113,7 @@ int main(void) {
 
 	/* Enable the interrupt. */
 
-	NVIC_SetPriority( PORTC_IRQn, 2);
+	NVIC_SetPriority( PORTC_IRQn, 1);
 	NVIC_EnableIRQ( PORTC_IRQn);
 
 	i2c_init();
@@ -165,8 +126,6 @@ int main(void) {
 
 	createSemaphoreMutex();
 
-	createQueues();
-
 	uart_init();
 
 
@@ -177,9 +136,10 @@ int main(void) {
 	/* Add your code here */
 
 	/* Create RTOS task */
-	xTaskCreate(mainMenu0_task, "MainMenu0_Task", configMINIMAL_STACK_SIZE, NULL,4, NULL);
-	xTaskCreate(mainMenu3_task, "MainMenu0_Task", configMINIMAL_STACK_SIZE, NULL,4, NULL);
-	// xTaskCreate(getTime_task, "GetTime_Task", configMINIMAL_STACK_SIZE, NULL, 4, NULL);
+	xTaskCreate(mainMenu0_task, "MainMenu0_Task", configMINIMAL_STACK_SIZE, NULL,5, NULL);
+	xTaskCreate(mainMenu3_task, "MainMenu0_Task", configMINIMAL_STACK_SIZE, NULL,5, NULL);
+	xTaskCreate(getTime_task, "GetTime_Task", configMINIMAL_STACK_SIZE, NULL, 3, NULL);
+	xTaskCreate(serialTimeLCD, "serialTimeLCD", configMINIMAL_STACK_SIZE, NULL, 3,&lcdHandle);
 
 	vTaskStartScheduler();
 
