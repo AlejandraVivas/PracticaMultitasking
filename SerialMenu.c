@@ -42,6 +42,7 @@ uint8_t contentString[] = "Contenido:\r";
 
 /*Write Memory Menu*/
 uint8_t memoryWriteDirectionString[] = "Direccion de Escritura:\r";
+uint8_t lenghtToWriteString[] = "Longitud en bytes: \r";
 uint8_t savedTextString[] = "Texto a guardar:\r";
 uint8_t savedString[] = "Su texto ha sido guardado";
 
@@ -86,6 +87,8 @@ uint8_t adjust7[] = "\033[2;33H";
 uint8_t adjust8[] = "\033[2;30H";
 uint8_t adjust9[] = "\033[1;33H";
 uint8_t adjut10[] = "\033[12;1H";
+uint8_t adjust11[] = "\033[4;1H";
+uint8_t adjust12[] = "\033[3;18H";
 uint8_t deleteLine[] = "\033[2K";
 
 
@@ -141,6 +144,9 @@ SemaphoreHandle_t Mutex_ReadHour;      //Option 6
 SemaphoreHandle_t Mutex_ReadDate;      //Option 7
 SemaphoreHandle_t Mutex_Eco;           //Option 9
 
+SemaphoreHandle_t xCountingSemaphore;
+
+BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 
 /*get time*/
 uint16_t hexAddress;
@@ -174,6 +180,8 @@ void createSemaphoreMutex(void)
 	Mutex_ReadDate  = xSemaphoreCreateMutex(); //Option 7
 	Mutex_Eco       = xSemaphoreCreateMutex(); //Option 9
 
+	xCountingSemaphore = xSemaphoreCreateCounting(10,0);
+
 }
 
 
@@ -201,6 +209,8 @@ void PORTC_IRQHandler(void)
 	default:
 		break;
 	}
+	xSemaphoreGiveFromISR( xCountingSemaphore, &xHigherPriorityTaskWoken );
+	portYIELD_FROM_ISR( xHigherPriorityTaskWoken );
 }
 
 
@@ -244,7 +254,7 @@ void mainMenu0_task(void *pvParameters)
 	{
 		if(!xEventGroupGetBits(Event_uartHandle0))
 		{
-			if(xSemaphoreTakeFromISR(NewDataUart0,pxHigherPriorityTaskWoken))
+			if(xSemaphoreTake(NewDataUart0,portMAX_DELAY))
 			{
 				if(0x39 >= uart0Data && 0x31<= uart0Data)
 				{
@@ -379,7 +389,7 @@ void mainMenu0_task(void *pvParameters)
 			printingMenu(DEMO_UART0);
 		}
 		vTaskDelay(1);
-		//taskYIELD();
+		taskYIELD();
 	}
 }
 
@@ -389,7 +399,7 @@ void mainMenu3_task(void *pvParameters)
 	{
 		if(!xEventGroupGetBits(Event_uartHandle3))
 		{
-			if(xSemaphoreTakeFromISR(NewDataUart3,pxHigherPriorityTaskWoken))
+			if(xSemaphoreTake(NewDataUart3,portMAX_DELAY))
 			{
 				if(0x39 >= uart3Data && 0x31<= uart3Data)
 				{
@@ -523,7 +533,7 @@ void mainMenu3_task(void *pvParameters)
 			printingMenu(DEMO_UART3);
 		}
 		vTaskDelay(1);
-		//taskYIELD();
+		taskYIELD();
 
 	}
 }
@@ -580,20 +590,14 @@ void readingI2C_task(void *pvParameters)
 {
 	static uint16_t readAddress;
 	static uint32_t readLenght;
-	static uint8_t memoryCounter = 0;
-	static uint8_t lengthCounter;
-	static uint8_t memoryVal[255];
-	static uint8_t *string;
-	static uint8_t counter = 0;
+	uint8_t testAddress[4];
+	uint8_t memoryCounter = 0;
 	static uint8_t lengthToRead[3];
-	static uint8_t midatoMemoria[4]; /**address that's going to be read*/
-	static uint16_t numberOfBytes; /**length of the string we're reading*/
-	static uint8_t readValue[255];
+	static uint8_t midatoMemoria[7]; /**address that's going to be read*/
+	uint8_t readValue[255];
 	static uint8_t received_data;
 	UART_Type *currentUart;
-	static uint8_t key_pressedMemory = TRUE;
-	static uint8_t key_pressedLenght = FALSE;
-
+	uint8_t key_pressedMemory = TRUE;
 	for(;;)
 	{
 		if(MENU_OP1 == xEventGroupGetBits(Event_uartHandle0) || MENU_OP1 == xEventGroupGetBits(Event_uartHandle3))
@@ -612,37 +616,32 @@ void readingI2C_task(void *pvParameters)
 
 					if(memoryCounter == 4)
 					{
-						memoryCounter =0;
-						key_pressedMemory = FALSE;
+						testAddress[0] = midatoMemoria[0];
+						testAddress[1] = midatoMemoria[1];
+						testAddress[2] = midatoMemoria[2];
+						testAddress[3] = midatoMemoria[3];
 						UART_WriteBlocking(currentUart, adjust5, sizeof(adjust5) / sizeof(adjust5[0]));
-						lengthCounter = 0;
 					}
-				}
-				if(FALSE == key_pressedMemory)
-				{
-
-					lengthToRead[readLenght] = received_data;
-
-					if(readLenght ==3)
+					else if(memoryCounter == 7)
 					{
-						readLenght =0;
-						key_pressedLenght = FALSE;
+						lengthToRead[0] = midatoMemoria[4];
+						lengthToRead[1] = midatoMemoria[5];
+						lengthToRead[2] = midatoMemoria[6];
 					}
-					readLenght++;
 				}
 				if(ENTERTERA == received_data)
 				{
-
-					UART_WriteBlocking(currentUart, string, sizeof(string) / sizeof(string[0]));
-					readAddress = asciiToHex(midatoMemoria);
+					key_pressedMemory = FALSE;
+					readAddress = asciiToHex(testAddress);
 					readLenght = asciiToHex(lengthToRead);
-					//	I2C_MemoryRead(I2C0, MEM_DEVICE_ADD, readAddress,readValue, readLenght);
-					//vTaskDelay(1000);
+
+					I2C_MemoryRead(I2C0, MEM_DEVICE_ADD, readAddress,readValue, readLenght);
 					UART_WriteBlocking(currentUart, adjust4, sizeof(adjust4) / sizeof(adjust4[0]));
-					UART_WriteBlocking(currentUart, readValue, sizeof(readValue) / sizeof(readValue[0]));
+					UART_WriteBlocking(currentUart, contentString, sizeof(contentString) / sizeof(contentString[0]));
+					UART_WriteBlocking(currentUart, adjust11, sizeof(adjust11) / sizeof(adjust11[0]));
+					UART_WriteBlocking(currentUart, readValue,readLenght);
 
 				}
-
 
 			}
 			else if(xSemaphoreTakeFromISR(NewDataUart3, pxHigherPriorityTaskWoken))
@@ -650,10 +649,41 @@ void readingI2C_task(void *pvParameters)
 				received_data = uart3Data;
 				currentUart = DEMO_UART3;
 				UART_WriteByte(currentUart, received_data);
-				if(ESCTERA != received_data)
+
+				if(TRUE == key_pressedMemory)
 				{
-					key_pressedLenght = TRUE;
+
+					midatoMemoria[memoryCounter] = received_data;
+					memoryCounter++;
+
+					if(memoryCounter == 4)
+					{
+						testAddress[0] = midatoMemoria[0];
+						testAddress[1] = midatoMemoria[1];
+						testAddress[2] = midatoMemoria[2];
+						testAddress[3] = midatoMemoria[3];
+						UART_WriteBlocking(currentUart, adjust5, sizeof(adjust5) / sizeof(adjust5[0]));
+					}
+					else if(memoryCounter == 7)
+					{
+						lengthToRead[0] = midatoMemoria[4];
+						lengthToRead[1] = midatoMemoria[5];
+						lengthToRead[2] = midatoMemoria[6];
+					}
 				}
+				if(ENTERTERA == received_data)
+				{
+					key_pressedMemory = FALSE;
+					readAddress = asciiToHex(testAddress);
+					readLenght = asciiToHex(lengthToRead);
+
+					I2C_MemoryRead(I2C0, MEM_DEVICE_ADD, readAddress,readValue, readLenght);
+					UART_WriteBlocking(currentUart, adjust4, sizeof(adjust4) / sizeof(adjust4[0]));
+					UART_WriteBlocking(currentUart, contentString, sizeof(contentString) / sizeof(contentString[0]));
+					UART_WriteBlocking(currentUart, adjust11, sizeof(adjust11) / sizeof(adjust11[0]));
+					UART_WriteBlocking(currentUart, readValue, sizeof(readValue) / sizeof(readValue[0]));
+				}
+
 			}
 		}
 		vTaskDelay(1);
@@ -663,8 +693,87 @@ void readingI2C_task(void *pvParameters)
 
 void writingI2C_task(void *pvParameters)
 {
-	taskYIELD();
+	static uint16_t readAddress;
+	static uint32_t readLenght;
+	uint8_t data[200];
+	uint8_t dataIn[7];
+	static uint8_t dataLong[3];
+	static uint8_t writeDirection[4];
+	static uint8_t received_data;
+	UART_Type *currentUart;
+	uint8_t counter = 0;
+	uint8_t dataCounter = 0;
+	uint8_t key_pressedMemory = TRUE;
+	uint8_t key_pressedDataIn = FALSE;
+	for(;;)
+	{
+		if(MENU_OP2 == xEventGroupGetBits(Event_uartHandle0) || MENU_OP2 == xEventGroupGetBits(Event_uartHandle3))
+		{
+			if(xSemaphoreTakeFromISR(NewDataUart0, pxHigherPriorityTaskWoken))
+			{
+				received_data = uart0Data;
+				currentUart = DEMO_UART0;
+				UART_WriteByte(currentUart, received_data);
 
+				if(TRUE == key_pressedDataIn)
+				{
+					if(ENTERTERA != received_data)
+					{
+						data[dataCounter] = received_data;
+						dataCounter++;
+					}
+					else if(ENTERTERA == received_data)
+					{
+						dataCounter = 0;
+						delay(100);
+						I2C_MemoryWrite(I2C0, MEM_DEVICE_ADD, readAddress, data, readLenght);
+						key_pressedDataIn = 0;
+					}
+				}
+
+				else if(TRUE == key_pressedMemory)
+				{
+					if(ENTERTERA != received_data)
+					{
+						dataIn[counter] = received_data;
+						counter++;
+
+						if(counter == 4)
+						{
+							writeDirection[0] = dataIn[0];
+							writeDirection[1] = dataIn[1];
+							writeDirection[2] = dataIn[2];
+							writeDirection[3] = dataIn[3];
+
+							readAddress = asciiToHex(writeDirection);
+							UART_WriteBlocking(currentUart, adjust5, sizeof(adjust5) / sizeof(adjust5[0]));
+						}
+					}
+					else if(ENTERTERA == received_data)
+					{
+						counter = 0;
+
+						UART_WriteBlocking(currentUart, adjust11, sizeof(adjust11) / sizeof(adjust11[0]));
+						dataLong[0] = dataIn[4];
+						dataLong[1] = dataIn[5];
+						dataLong[2] = dataIn[6];
+
+						readLenght =  asciiToHex(dataLong);
+						key_pressedMemory = FALSE;
+						key_pressedDataIn = TRUE;
+					}
+				}
+
+
+			}
+			else if(xSemaphoreTakeFromISR(NewDataUart3, pxHigherPriorityTaskWoken))
+			{
+
+			}
+		}
+		vTaskDelay(1);
+		taskYIELD();
+	}
 }
 
 void setHour_task(void *pvParameters)
@@ -690,15 +799,11 @@ void setHour_task(void *pvParameters)
 				else if(ENTERTERA == received_data)
 				{
 					counter = 0;
-					I2C_RtcWrite(I2C0, RTC_DEVICE_ADD,0x00, 0x00);
-					delay(1000);
 					I2C_RtcWrite(I2C0, RTC_DEVICE_ADD, 0x02, ((myRtcDataTime[0]-ASCII_NUMBER_MASK))<<4 | (myRtcDataTime[1]-ASCII_NUMBER_MASK));
 					delay(1000);
 					I2C_RtcWrite(I2C0, RTC_DEVICE_ADD, 0x01, ((myRtcDataTime[2]-ASCII_NUMBER_MASK))<<4 | (myRtcDataTime[3]-ASCII_NUMBER_MASK));
 					delay(1000);
-					I2C_RtcWrite(I2C0, RTC_DEVICE_ADD,0x00, ((myRtcDataTime[4]-ASCII_NUMBER_MASK))<<4 | (myRtcDataTime[5]-ASCII_NUMBER_MASK));
-					delay(1000);
-					I2C_RtcWrite(I2C0, RTC_DEVICE_ADD,0x00, 0x80);
+					I2C_RtcWrite(I2C0, RTC_DEVICE_ADD,0x00, (0x80 | ((myRtcDataTime[4]-ASCII_NUMBER_MASK))<<4 | (myRtcDataTime[5]-ASCII_NUMBER_MASK)));
 				}
 			}
 			else if(xSemaphoreTakeFromISR(NewDataUart3, pxHigherPriorityTaskWoken))
@@ -714,17 +819,14 @@ void setHour_task(void *pvParameters)
 				else if(ENTERTERA == received_data)
 				{
 					counter = 0;
-					I2C_RtcWrite(I2C0, RTC_DEVICE_ADD,0x00, 0x00);
-					delay(1000);
 					I2C_RtcWrite(I2C0, RTC_DEVICE_ADD, 0x02, ((myRtcDataTime[0]-ASCII_NUMBER_MASK))<<4 | (myRtcDataTime[1]-ASCII_NUMBER_MASK));
 					delay(1000);
 					I2C_RtcWrite(I2C0, RTC_DEVICE_ADD, 0x01, ((myRtcDataTime[2]-ASCII_NUMBER_MASK))<<4 | (myRtcDataTime[3]-ASCII_NUMBER_MASK));
 					delay(1000);
-					I2C_RtcWrite(I2C0, RTC_DEVICE_ADD,0x00, ((myRtcDataTime[4]-ASCII_NUMBER_MASK))<<4 | (myRtcDataTime[5]-ASCII_NUMBER_MASK));
-					delay(1000);
-					I2C_RtcWrite(I2C0, RTC_DEVICE_ADD,0x00, 0x80);
+					I2C_RtcWrite(I2C0, RTC_DEVICE_ADD,0x00, (0x80 | ((myRtcDataTime[4]-ASCII_NUMBER_MASK))<<4 | (myRtcDataTime[5]-ASCII_NUMBER_MASK)));
 				}
 			}
+
 
 		}
 		vTaskDelay(1);
@@ -755,15 +857,11 @@ void setDate_task(void *pvParameters)
 				{
 					counter = 0;
 
-					I2C_RtcWrite(I2C0, RTC_DEVICE_ADD,0x00, 0x00);
-					delay(1000);
 					I2C_RtcWrite(I2C0, RTC_DEVICE_ADD, 0x04, ((myRtcDataDate[0]-ASCII_NUMBER_MASK))<<4 | (myRtcDataDate[1]-ASCII_NUMBER_MASK));
 					delay(1000);
 					I2C_RtcWrite(I2C0, RTC_DEVICE_ADD, 0x05, ((myRtcDataDate[2]-ASCII_NUMBER_MASK))<<4 | (myRtcDataDate[3]-ASCII_NUMBER_MASK));
 					delay(1000);
 					I2C_RtcWrite(I2C0, RTC_DEVICE_ADD,0x06, ((myRtcDataDate[4]-ASCII_NUMBER_MASK))<<4 | (myRtcDataDate[5]-ASCII_NUMBER_MASK));
-					delay(1000);
-					I2C_RtcWrite(I2C0, RTC_DEVICE_ADD,0x00, 0x80);
 				}
 			}
 			else if(xSemaphoreTakeFromISR(NewDataUart3, pxHigherPriorityTaskWoken))
@@ -779,16 +877,11 @@ void setDate_task(void *pvParameters)
 				else if(ENTERTERA == received_data)
 				{
 					counter = 0;
-
-					I2C_RtcWrite(I2C0, RTC_DEVICE_ADD,0x00, 0x00);
-					delay(1000);
 					I2C_RtcWrite(I2C0, RTC_DEVICE_ADD, 0x04, ((myRtcDataDate[0]-ASCII_NUMBER_MASK))<<4 | (myRtcDataDate[1]-ASCII_NUMBER_MASK));
 					delay(1000);
 					I2C_RtcWrite(I2C0, RTC_DEVICE_ADD, 0x05, ((myRtcDataDate[2]-ASCII_NUMBER_MASK))<<4 | (myRtcDataDate[3]-ASCII_NUMBER_MASK));
 					delay(1000);
 					I2C_RtcWrite(I2C0, RTC_DEVICE_ADD,0x06, ((myRtcDataDate[4]-ASCII_NUMBER_MASK))<<4 | (myRtcDataDate[5]-ASCII_NUMBER_MASK));
-					delay(1000);
-					I2C_RtcWrite(I2C0, RTC_DEVICE_ADD,0x00, 0x80);
 				}
 			}
 
@@ -1105,7 +1198,7 @@ void eco_task(void *pvParameters)
 
 static void printingReadMemMenu(UART_Type *base)
 {
-	xTaskCreate(readingI2C_task, "ReadingI2C_Task", configMINIMAL_STACK_SIZE, NULL, 2, &readingI2CHandle);//OPTION 1
+	xTaskCreate(readingI2C_task, "ReadingI2C_Task", 360, NULL, 2, &readingI2CHandle);//OPTION 1
 	if(UART0 ==  base)
 	{
 		UART_WriteBlocking(DEMO_UART0, clearingCommand, sizeof(clearingCommand) / sizeof(clearingCommand[0]));
@@ -1130,7 +1223,7 @@ static void printingReadMemMenu(UART_Type *base)
 
 static void printingWriteMemMenu(UART_Type *base)
 {
-	xTaskCreate(writingI2C_task, "WritingI2C_Task", configMINIMAL_STACK_SIZE, NULL, 2, &writingI2CHandle);//OPTION 2
+	xTaskCreate(writingI2C_task, "WritingI2C_Task", 360, NULL, 2, &writingI2CHandle);//OPTION 2
 	if(UART0 == base)
 	{
 		UART_WriteBlocking(DEMO_UART0, clearingCommand, sizeof(clearingCommand) / sizeof(clearingCommand[0]));
@@ -1138,8 +1231,9 @@ static void printingWriteMemMenu(UART_Type *base)
 		UART_WriteBlocking(DEMO_UART0, xandyPositioning, sizeof(xandyPositioning) / sizeof(xandyPositioning[0]));
 		UART_WriteBlocking(DEMO_UART0, memoryWriteDirectionString, sizeof(memoryWriteDirectionString) / sizeof(memoryWriteDirectionString[0]));
 		UART_WriteBlocking(DEMO_UART0, adjust2, sizeof(adjust2) / sizeof(adjust2[0]));
+		UART_WriteBlocking(DEMO_UART0, lenghtToWriteString, sizeof(lenghtToWriteString) / sizeof(lenghtToWriteString[0]));
+		UART_WriteBlocking(DEMO_UART0, adjust4, sizeof(adjust4) / sizeof(adjust4[0]));
 		UART_WriteBlocking(DEMO_UART0, savedTextString, sizeof(savedTextString) / sizeof(savedTextString[0]));
-		UART_WriteBlocking(DEMO_UART0, adjust4, sizeof(adjust3) / sizeof(adjust3[0]));
 		UART_WriteBlocking(DEMO_UART0, adjust3, sizeof(adjust3) / sizeof(adjust3[0]));
 	}
 	else if(UART3 == base)
@@ -1149,8 +1243,9 @@ static void printingWriteMemMenu(UART_Type *base)
 		UART_WriteBlocking(DEMO_UART3, xandyPositioning, sizeof(xandyPositioning) / sizeof(xandyPositioning[0]));
 		UART_WriteBlocking(DEMO_UART3, memoryWriteDirectionString, sizeof(memoryWriteDirectionString) / sizeof(memoryWriteDirectionString[0]));
 		UART_WriteBlocking(DEMO_UART3, adjust2, sizeof(adjust2) / sizeof(adjust2[0]));
+		UART_WriteBlocking(DEMO_UART3, lenghtToWriteString, sizeof(lenghtToWriteString) / sizeof(lenghtToWriteString[0]));
+		UART_WriteBlocking(DEMO_UART3, adjust4, sizeof(adjust4) / sizeof(adjust4[0]));
 		UART_WriteBlocking(DEMO_UART3, savedTextString, sizeof(savedTextString) / sizeof(savedTextString[0]));
-		UART_WriteBlocking(DEMO_UART3, adjust4, sizeof(adjust3) / sizeof(adjust3[0]));
 		UART_WriteBlocking(DEMO_UART3, adjust3, sizeof(adjust3) / sizeof(adjust3[0]));
 	}
 }
@@ -1312,7 +1407,6 @@ void getTime_task(void *pvParameters)
 	/*Start Timer*/
 	I2C_RtcWrite(I2C0, RTC_DEVICE_ADD, 0x00, 0x80);
 
-
 	for(;;)
 	{
 		if(FALSE == I2C_RtcRead(I2C0, RTC_DEVICE_ADD, 0x00, timeBuffer, 7))
@@ -1320,7 +1414,8 @@ void getTime_task(void *pvParameters)
 			UART_WriteBlocking(DEMO_UART0, errorString, sizeof(errorString) / sizeof(errorString[0]));
 			delay(600000);
 			UART_WriteBlocking(DEMO_UART0, deleteLine, sizeof(deleteLine) / sizeof(deleteLine [0]));
-		}
+			UART_WriteBlocking(DEMO_UART0, adjut10, sizeof(adjut10) / sizeof(adjut10[0]));
+		} //else I2C_RtcWrite(I2C0, RTC_DEVICE_ADD, 0x00, 0x80);
 
 		I2C_RtcRead(I2C0, RTC_DEVICE_ADD, 0x00, timeBuffer, 7);
 		timeBuffer[0] = timeBuffer[0] & SECONDS_REG_SIZE;
@@ -1381,40 +1476,6 @@ void serialTimeLCD( void *pvParameters)
 
 	}
 }
-
-
-
-//uint8_t *memoryReadValue(uint8_t *address, uint8_t *lenght){
-//	uint8_t stringLength = 255;
-//	uint8_t memoryVal[stringLength];
-//	uint8_t *string;
-//	static uint8_t counter = 0;
-//	uint16_t readAddress = asciiToHex(address);
-//	uint32_t readLenght = asciiToHex(lenght);
-//
-// 	for(counter = 0; counter <= 60;counter++){
-//		memoryVal[counter] = 0x00;
-//	}
-//		memoryVal[counter] = I2C_MemoryRead(I2C0, MEM_DEVICE_ADD, readAddress,memoryVal, readLenght);
-//
-//	string = memoryVal;
-//	return string;
-//}
-
-
-//
-//
-//
-//void memoryWriteValue(I2C_ChannelType channel, uint8 *address, uint8 *data){
-//
-//	uint16 readAddress = asciiToHex(address);
-//	while(*data){
-//		I2C_memWriteByte(channel, readAddress++, *data++);
-//		delay(5000);
-//	}
-//}
-//
-
 
 uint16_t asciiToHex(uint8_t *string){
 	while(*string){

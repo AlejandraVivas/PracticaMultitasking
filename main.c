@@ -73,6 +73,7 @@ TaskHandle_t lcdHandle;
 int main(void) {
 	/* Init board hardware. */
 
+
 	BOARD_InitPins();
 	BOARD_BootClockRUN();
 	BOARD_InitDebugConsole();
@@ -113,7 +114,7 @@ int main(void) {
 
 	/* Enable the interrupt. */
 
-	NVIC_SetPriority( PORTC_IRQn, 1);
+	NVIC_SetPriority( PORTC_IRQn, 6);
 	NVIC_EnableIRQ( PORTC_IRQn);
 
 	i2c_init();
