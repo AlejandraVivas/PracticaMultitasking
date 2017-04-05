@@ -81,6 +81,8 @@ int main(void) {
 	NVIC_SetPriority(DEMO_UART0_RX_TX_IRQn, 5);
 	NVIC_SetPriority(DEMO_UART3_RX_TX_IRQn, 5);
 	NVIC_SetPriority(SPI0_IRQn, 5);
+
+	gpio_pin_config_t config_gpio = { kGPIO_DigitalInput, 0 };
 	port_pin_config_t config =
 	{
 			kPORT_PullDisable,
@@ -103,29 +105,29 @@ int main(void) {
 	PORT_SetPinConfig(PORTC, BIT0, &config);
 	PORT_SetPinConfig(PORTC, BIT9, &config);
 
+	GPIO_PinInit(GPIOC, BIT5, &config_gpio);
+	GPIO_PinInit(GPIOC, BIT7, &config_gpio);
+	GPIO_PinInit(GPIOC, BIT0, &config_gpio);
+	GPIO_PinInit(GPIOC, BIT9, &config_gpio);
 
 	PORT_SetPinInterruptConfig(PORTC, BIT5, kPORT_InterruptFallingEdge);
 	PORT_SetPinInterruptConfig(PORTC, BIT7, kPORT_InterruptFallingEdge);
 	PORT_SetPinInterruptConfig(PORTC, BIT0, kPORT_InterruptFallingEdge);
 	PORT_SetPinInterruptConfig(PORTC, BIT9, kPORT_InterruptFallingEdge);
-	PORT_SetPinInterruptConfig(PORTC, BIT8, kPORT_InterruptFallingEdge);
-	PORT_SetPinInterruptConfig(PORTC, BIT1, kPORT_InterruptFallingEdge);
-
-
 	/* Enable the interrupt. */
 
-	NVIC_SetPriority( PORTC_IRQn, 6);
+	NVIC_SetPriority( PORTC_IRQn, 1);
 	NVIC_EnableIRQ( PORTC_IRQn);
 
 	i2c_init();
 
 	spi_init();
 
-
 	LCDNokia_init();
 	LCDNokia_clear();
 
 	createSemaphoreMutex();
+
 
 	uart_init();
 

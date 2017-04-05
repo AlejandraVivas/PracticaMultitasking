@@ -180,38 +180,38 @@ void createSemaphoreMutex(void)
 	Mutex_ReadDate  = xSemaphoreCreateMutex(); //Option 7
 	Mutex_Eco       = xSemaphoreCreateMutex(); //Option 9
 
-	xCountingSemaphore = xSemaphoreCreateCounting(10,0);
+	//xCountingSemaphore = xSemaphoreCreateCounting(10,0);
 
 }
 
 
-void PORTC_IRQHandler(void)
-{
-	bitNumber = GPIO_GetPinsInterruptFlags(GPIOC);
-	switch(bitNumber)
-	{
-	case BIT5:
-		GPIO_ClearPinsInterruptFlags(GPIOC, BIT5);
-		buttonOneFlag = TRUE;
-		break;
-	case BIT7:
-		GPIO_ClearPinsInterruptFlags(GPIOC, BIT7);
-		buttonTwoFlag = TRUE;
-		break;
-	case BIT0:
-		GPIO_ClearPinsInterruptFlags(GPIOC, BIT0);
-		buttonThreeFlag = TRUE;
-		break;
-	case BIT9:
-		GPIO_ClearPinsInterruptFlags(GPIOC, BIT9);
-		buttonFourFlag = TRUE;
-		break;
-	default:
-		break;
-	}
-	xSemaphoreGiveFromISR( xCountingSemaphore, &xHigherPriorityTaskWoken );
-	portYIELD_FROM_ISR( xHigherPriorityTaskWoken );
-}
+//void PORTC_IRQHandler(void)
+//{
+//	bitNumber = GPIO_GetPinsInterruptFlags(GPIOC);
+//	switch(bitNumber)
+//	{
+//	case BIT5:
+//		GPIO_ClearPinsInterruptFlags(GPIOC, BIT5);
+//		buttonOneFlag = TRUE;
+//		break;
+//	case BIT7:
+//		GPIO_ClearPinsInterruptFlags(GPIOC, BIT7);
+//		buttonTwoFlag = TRUE;
+//		break;
+//	case BIT0:
+//		GPIO_ClearPinsInterruptFlags(GPIOC, BIT0);
+//		buttonThreeFlag = TRUE;
+//		break;
+//	case BIT9:
+//		GPIO_ClearPinsInterruptFlags(GPIOC, BIT9);
+//		buttonFourFlag = TRUE;
+//		break;
+//	default:
+//		break;
+//	}
+//	xSemaphoreGiveFromISR( xCountingSemaphore, &xHigherPriorityTaskWoken );
+//	portYIELD_FROM_ISR( xHigherPriorityTaskWoken );
+//}
 
 
 void DEMO_UART0_IRQHandler(void)
@@ -602,7 +602,7 @@ void readingI2C_task(void *pvParameters)
 	{
 		if(MENU_OP1 == xEventGroupGetBits(Event_uartHandle0) || MENU_OP1 == xEventGroupGetBits(Event_uartHandle3))
 		{
-			if(xSemaphoreTakeFromISR(NewDataUart0, pxHigherPriorityTaskWoken))
+			if(xSemaphoreTake(NewDataUart0, portMAX_DELAY))
 			{
 				received_data = uart0Data;
 				currentUart = DEMO_UART0;
@@ -644,7 +644,7 @@ void readingI2C_task(void *pvParameters)
 				}
 
 			}
-			else if(xSemaphoreTakeFromISR(NewDataUart3, pxHigherPriorityTaskWoken))
+			else if(xSemaphoreTake(NewDataUart3, portMAX_DELAY))
 			{
 				received_data = uart3Data;
 				currentUart = DEMO_UART3;
@@ -709,7 +709,7 @@ void writingI2C_task(void *pvParameters)
 	{
 		if(MENU_OP2 == xEventGroupGetBits(Event_uartHandle0) || MENU_OP2 == xEventGroupGetBits(Event_uartHandle3))
 		{
-			if(xSemaphoreTakeFromISR(NewDataUart0, pxHigherPriorityTaskWoken))
+			if(xSemaphoreTake(NewDataUart0, portMAX_DELAY))
 			{
 				received_data = uart0Data;
 				currentUart = DEMO_UART0;
@@ -763,15 +763,64 @@ void writingI2C_task(void *pvParameters)
 						key_pressedDataIn = TRUE;
 					}
 				}
-
-
 			}
-			else if(xSemaphoreTakeFromISR(NewDataUart3, pxHigherPriorityTaskWoken))
+			else if(xSemaphoreTake(NewDataUart3, portMAX_DELAY))
 			{
+				received_data = uart3Data;
+				currentUart = DEMO_UART3;
+				UART_WriteByte(currentUart, received_data);
 
+				if(TRUE == key_pressedDataIn)
+				{
+					if(ENTERTERA != received_data)
+					{
+						data[dataCounter] = received_data;
+						dataCounter++;
+					}
+					else if(ENTERTERA == received_data)
+					{
+						dataCounter = 0;
+						delay(100);
+						I2C_MemoryWrite(I2C0, MEM_DEVICE_ADD, readAddress, data, readLenght);
+						key_pressedDataIn = 0;
+					}
+				}
+
+				else if(TRUE == key_pressedMemory)
+				{
+					if(ENTERTERA != received_data)
+					{
+						dataIn[counter] = received_data;
+						counter++;
+
+						if(counter == 4)
+						{
+							writeDirection[0] = dataIn[0];
+							writeDirection[1] = dataIn[1];
+							writeDirection[2] = dataIn[2];
+							writeDirection[3] = dataIn[3];
+
+							readAddress = asciiToHex(writeDirection);
+							UART_WriteBlocking(currentUart, adjust5, sizeof(adjust5) / sizeof(adjust5[0]));
+						}
+					}
+					else if(ENTERTERA == received_data)
+					{
+						counter = 0;
+
+						UART_WriteBlocking(currentUart, adjust11, sizeof(adjust11) / sizeof(adjust11[0]));
+						dataLong[0] = dataIn[4];
+						dataLong[1] = dataIn[5];
+						dataLong[2] = dataIn[6];
+
+						readLenght =  asciiToHex(dataLong);
+						key_pressedMemory = FALSE;
+						key_pressedDataIn = TRUE;
+					}
+				}
 			}
 		}
-		vTaskDelay(1);
+		vTaskDelay(10);
 		taskYIELD();
 	}
 }
@@ -786,7 +835,7 @@ void setHour_task(void *pvParameters)
 	{
 		if(MENU_OP3 == xEventGroupGetBits(Event_uartHandle0) || MENU_OP3 == xEventGroupGetBits(Event_uartHandle3))
 		{
-			if(xSemaphoreTakeFromISR(NewDataUart0, pxHigherPriorityTaskWoken))
+			if(xSemaphoreTake(NewDataUart0, portMAX_DELAY))
 			{
 				received_data = uart0Data;
 				currentUart = DEMO_UART0;
@@ -806,7 +855,7 @@ void setHour_task(void *pvParameters)
 					I2C_RtcWrite(I2C0, RTC_DEVICE_ADD,0x00, (0x80 | ((myRtcDataTime[4]-ASCII_NUMBER_MASK))<<4 | (myRtcDataTime[5]-ASCII_NUMBER_MASK)));
 				}
 			}
-			else if(xSemaphoreTakeFromISR(NewDataUart3, pxHigherPriorityTaskWoken))
+			else if(xSemaphoreTake(NewDataUart3, portMAX_DELAY))
 			{
 				received_data = uart3Data;
 				currentUart = DEMO_UART3;
@@ -843,7 +892,7 @@ void setDate_task(void *pvParameters)
 	{
 		if(MENU_OP4 == xEventGroupGetBits(Event_uartHandle0) || MENU_OP4 == xEventGroupGetBits(Event_uartHandle3))
 		{
-			if(xSemaphoreTakeFromISR(NewDataUart0, pxHigherPriorityTaskWoken))
+			if(xSemaphoreTake(NewDataUart0, portMAX_DELAY))
 			{
 				received_data = uart0Data;
 				currentUart = DEMO_UART0;
@@ -864,7 +913,7 @@ void setDate_task(void *pvParameters)
 					I2C_RtcWrite(I2C0, RTC_DEVICE_ADD,0x06, ((myRtcDataDate[4]-ASCII_NUMBER_MASK))<<4 | (myRtcDataDate[5]-ASCII_NUMBER_MASK));
 				}
 			}
-			else if(xSemaphoreTakeFromISR(NewDataUart3, pxHigherPriorityTaskWoken))
+			else if(xSemaphoreTake(NewDataUart3, portMAX_DELAY))
 			{
 				received_data = uart3Data;
 				currentUart = DEMO_UART3;
@@ -899,7 +948,7 @@ void hourFormat_task(void *pvParameters)
 	{
 		if(MENU_OP5 == xEventGroupGetBits(Event_uartHandle0) || MENU_OP5 == xEventGroupGetBits(Event_uartHandle3))
 		{
-			if(xSemaphoreTakeFromISR(NewDataUart0, pxHigherPriorityTaskWoken))
+			if(xSemaphoreTake(NewDataUart0, portMAX_DELAY))
 			{
 				received_data = uart0Data;
 				currentUart = DEMO_UART0;
@@ -923,7 +972,7 @@ void hourFormat_task(void *pvParameters)
 					I2C_RtcWrite(I2C0, RTC_DEVICE_ADD, 0x00, 0x80);
 				}
 			}
-			else if(xSemaphoreTakeFromISR(NewDataUart3, pxHigherPriorityTaskWoken))
+			else if(xSemaphoreTake(NewDataUart3, portMAX_DELAY))
 			{
 				received_data = uart3Data;
 				currentUart = DEMO_UART3;
@@ -949,7 +998,7 @@ void hourFormat_task(void *pvParameters)
 					}
 			}
 		}
-		vTaskDelay(1000);
+		vTaskDelay(1);
 		taskYIELD();
 	}
 }
@@ -1019,7 +1068,7 @@ void readHour_task(void *pvParameters)
 				}
 			}
 		}
-		vTaskDelay(1);
+		vTaskDelay(100);
 		taskYIELD();
 	}
 }
@@ -1099,7 +1148,7 @@ void chat_task(void *pvParameters)
 	{
 		if(MENU_OP8 == xEventGroupGetBits(Event_uartHandle0) && (MENU_OP8 == xEventGroupGetBits(Event_uartHandle3)))
 		{
-			if(xSemaphoreTakeFromISR(NewDataUart0, pxHigherPriorityTaskWoken))
+			if(xSemaphoreTake(NewDataUart0, portMAX_DELAY))
 			{
 				received_data = uart0Data;
 				currentUart = DEMO_UART0;
@@ -1121,7 +1170,7 @@ void chat_task(void *pvParameters)
 					UART_WriteBlocking(DEMO_UART3, NewLineString, sizeof(NewLineString) / sizeof(NewLineString[0]));
 				}
 			}
-			if(xSemaphoreTakeFromISR(NewDataUart3, pxHigherPriorityTaskWoken))
+			if(xSemaphoreTake(NewDataUart3, portMAX_DELAY))
 			{
 				received_data = uart3Data;
 				currentUart = DEMO_UART3;
@@ -1165,11 +1214,12 @@ void eco_task(void *pvParameters)
 	UART_Type *currentUart;
 	vTaskDelete(lcdHandle);
 	LCDNokia_clear();
+	LCDNokia_clear();
 	for(;;)
 	{
 		if (MENU_OP9 == xEventGroupGetBits(Event_uartHandle0) || MENU_OP9 == xEventGroupGetBits(Event_uartHandle3))
 		{
-			if(xSemaphoreTakeFromISR(NewDataUart0, pxHigherPriorityTaskWoken))
+			if(xSemaphoreTake(NewDataUart0, portMAX_DELAY))
 			{
 				received_data = uart0Data;
 				currentUart = DEMO_UART0;
@@ -1179,7 +1229,7 @@ void eco_task(void *pvParameters)
 					LCDNokia_sendChar(received_data);
 				}
 			}
-			else if(xSemaphoreTakeFromISR(NewDataUart3, pxHigherPriorityTaskWoken))
+			else if(xSemaphoreTake(NewDataUart3, portMAX_DELAY))
 			{
 				received_data = uart3Data;
 				currentUart = DEMO_UART3;
@@ -1198,7 +1248,7 @@ void eco_task(void *pvParameters)
 
 static void printingReadMemMenu(UART_Type *base)
 {
-	xTaskCreate(readingI2C_task, "ReadingI2C_Task", 360, NULL, 2, &readingI2CHandle);//OPTION 1
+	xTaskCreate(readingI2C_task, "ReadingI2C_Task", 450, NULL, 2, &readingI2CHandle);//OPTION 1
 	if(UART0 ==  base)
 	{
 		UART_WriteBlocking(DEMO_UART0, clearingCommand, sizeof(clearingCommand) / sizeof(clearingCommand[0]));
@@ -1223,7 +1273,7 @@ static void printingReadMemMenu(UART_Type *base)
 
 static void printingWriteMemMenu(UART_Type *base)
 {
-	xTaskCreate(writingI2C_task, "WritingI2C_Task", 360, NULL, 2, &writingI2CHandle);//OPTION 2
+	xTaskCreate(writingI2C_task, "WritingI2C_Task", 450, NULL, 2, &writingI2CHandle);//OPTION 2
 	if(UART0 == base)
 	{
 		UART_WriteBlocking(DEMO_UART0, clearingCommand, sizeof(clearingCommand) / sizeof(clearingCommand[0]));
@@ -1405,6 +1455,7 @@ static void printingEcoMenu(UART_Type *base)
 void getTime_task(void *pvParameters)
 {
 	/*Start Timer*/
+
 	I2C_RtcWrite(I2C0, RTC_DEVICE_ADD, 0x00, 0x80);
 
 	for(;;)
