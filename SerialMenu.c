@@ -1466,7 +1466,7 @@ void getTime_task(void *pvParameters)
 			delay(600000);
 			UART_WriteBlocking(DEMO_UART0, deleteLine, sizeof(deleteLine) / sizeof(deleteLine [0]));
 			UART_WriteBlocking(DEMO_UART0, adjut10, sizeof(adjut10) / sizeof(adjut10[0]));
-		} //else I2C_RtcWrite(I2C0, RTC_DEVICE_ADD, 0x00, 0x80);
+		}
 
 		I2C_RtcRead(I2C0, RTC_DEVICE_ADD, 0x00, timeBuffer, 7);
 		timeBuffer[0] = timeBuffer[0] & SECONDS_REG_SIZE;
